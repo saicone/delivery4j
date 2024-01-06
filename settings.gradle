@@ -1,0 +1,7 @@
+rootProject.name = 'delivery4j'
+
+include(
+	'delivery4j-rabbitmq',
+	'delivery4j-redis',
+	'delivery4j-hikari'
+	)
