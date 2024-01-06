@@ -55,6 +55,7 @@ tasks.register('allJavadoc', Javadoc) {
         links 'https://rabbitmq.github.io/rabbitmq-java-client/api/current/'
         links 'https://javadoc.io/doc/redis.clients/jedis/5.1.0/'
         links 'https://javadoc.io/doc/com.zaxxer/HikariCP/latest/'
+        links 'https://javadoc.io/doc/org.jetbrains/annotations/latest/'
     }
     destinationDir = file(project.buildDir.path + '/docs/all-javadoc')
 }
