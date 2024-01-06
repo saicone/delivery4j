@@ -1,7 +1,7 @@
 ---
 sidebar_position: 1
 title: Delivery4j
-description: Wrapper librerias de Java para tranferir datos utilizando distintos conceptos.
+description: Wrapper de librerias de Java para transferir datos utilizando distintos conceptos.
 ---
 
 Existen múltiples maneras de transferir datos entre aplicaciones Java, esta librería ofrece una forma fácil de conectar con estas utilizando métodos en común:
