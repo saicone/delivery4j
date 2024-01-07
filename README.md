@@ -15,7 +15,7 @@
     <a href="https://jitpack.io/#com.saicone/delivery4j">
         <img src="https://jitpack.io/v/com.saicone/delivery4j.svg?style=flat-square"/>
     </a>
-    <a href="https://javadoc.saicone.com/delivery4j/">
+    <a href="https://javadoc.saicone.com/delivery4j/overview-summary.html">
         <img src="https://img.shields.io/badge/JavaDoc-Online-green?style=flat-square"/>
     </a>
     <a href="https://docs.saicone.com/delivery4j/">
