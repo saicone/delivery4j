@@ -1,3 +1,14 @@
 dependencies {
     api 'com.rabbitmq:amqp-client:5.20.0'
 }
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId project.group
+            artifactId project.name
+            version project.version
+            from components.java
+        }
+    }
+}
