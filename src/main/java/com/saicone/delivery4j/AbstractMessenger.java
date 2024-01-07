@@ -98,7 +98,7 @@ public abstract class AbstractMessenger implements DeliveryService {
         }
     }
 
-    public boolean send(@NotNull String channel, @NotNull String... lines) {
+    public boolean send(@NotNull String channel, @Nullable Object... lines) {
         if (!isEnabled()) {
             return false;
         }
@@ -110,8 +110,8 @@ public abstract class AbstractMessenger implements DeliveryService {
                 out.writeInt(id);
             }
             out.writeInt(lines.length);
-            for (String message : lines) {
-                out.writeUTF(message);
+            for (Object message : lines) {
+                out.writeUTF(Objects.toString(message));
             }
             deliveryClient.send(channel, arrayOut.toByteArray());
             return true;
@@ -135,7 +135,8 @@ public abstract class AbstractMessenger implements DeliveryService {
             final String[] lines = new String[in.readInt()];
             try {
                 for (int i = 0; i < lines.length; i++) {
-                    lines[i] = in.readUTF();
+                    final String message = in.readUTF();
+                    lines[i] = message.equalsIgnoreCase("null") ? null : message;
                 }
             } catch (EOFException ignored) { }
             for (Consumer<String[]> consumer : consumers) {
