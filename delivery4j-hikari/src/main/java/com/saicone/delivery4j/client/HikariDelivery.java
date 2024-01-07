@@ -66,7 +66,7 @@ public class HikariDelivery extends DeliveryClient {
                 cleanTask = asyncRepeating(this::cleanMessages, 30, TimeUnit.SECONDS);
             }
         } catch (SQLException e) {
-            log(e);
+            log(1, e);
         }
     }
 
@@ -95,7 +95,7 @@ public class HikariDelivery extends DeliveryClient {
                 statement.execute();
             }
         } catch (SQLException e) {
-            log(e);
+            log(2, e);
         }
         lock.readLock().unlock();
     }
@@ -128,7 +128,7 @@ public class HikariDelivery extends DeliveryClient {
                 }
             }
         } catch (SQLException e) {
-            log(e);
+            log(2, e);
         }
         lock.readLock().unlock();
     }
@@ -144,7 +144,7 @@ public class HikariDelivery extends DeliveryClient {
                 statement.execute();
             }
         } catch (SQLException e) {
-            log(e);
+            log(2, e);
         }
         lock.readLock().unlock();
     }

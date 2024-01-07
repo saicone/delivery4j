@@ -91,7 +91,7 @@ public class RabbitMQDelivery extends DeliveryClient {
             }
             enabled = true;
         } catch (Throwable t) {
-            log(t);
+            log(1, t);
             return;
         }
 
@@ -117,7 +117,7 @@ public class RabbitMQDelivery extends DeliveryClient {
             try {
                 cChannel.queueBind(queue, exchange, channel);
             } catch (IOException e) {
-                log(e);
+                log(1, e);
             }
         }
     }
@@ -128,7 +128,7 @@ public class RabbitMQDelivery extends DeliveryClient {
             try {
                 cChannel.queueUnbind(queue, exchange, channel);
             } catch (IOException e) {
-                log(e);
+                log(1, e);
             }
         }
     }
@@ -143,7 +143,7 @@ public class RabbitMQDelivery extends DeliveryClient {
             // Publish to exchange and routing key without any special properties
             cChannel.basicPublish(exchange, channel, new AMQP.BasicProperties.Builder().build(), data);
         } catch (Throwable t) {
-            log(t);
+            log(2, t);
         }
     }
 
@@ -186,7 +186,7 @@ public class RabbitMQDelivery extends DeliveryClient {
                 }
             }
         } catch (Throwable t) {
-            log(t);
+            log(2, t);
         }
     }
 }

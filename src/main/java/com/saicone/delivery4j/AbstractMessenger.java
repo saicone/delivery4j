@@ -113,7 +113,7 @@ public abstract class AbstractMessenger implements DeliveryService {
             deliveryClient.send(channel, arrayOut.toByteArray());
             return true;
         } catch (IOException e) {
-            log(e);
+            log(2, e);
             return false;
         }
     }
@@ -135,7 +135,7 @@ public abstract class AbstractMessenger implements DeliveryService {
             }
             return true;
         } catch (IOException e) {
-            log(e);
+            log(2, e);
             return false;
         }
     }

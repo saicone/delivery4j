@@ -109,9 +109,9 @@ public abstract class DeliveryClient {
         onReceive(channel, data);
     }
 
-    protected void log(@NotNull Throwable t) {
+    protected void log(int level, @NotNull Throwable t) {
         if (service != null) {
-            service.log(t);
+            service.log(level, t);
         }
     }
 

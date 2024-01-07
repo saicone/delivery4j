@@ -9,7 +9,7 @@ public interface DeliveryService {
 
     boolean receive(String channel, byte[] data);
 
-    default void log(@NotNull Throwable t) {
+    default void log(int level, @NotNull Throwable t) {
         // empty default method
     }
 
