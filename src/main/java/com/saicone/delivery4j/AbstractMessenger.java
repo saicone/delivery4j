@@ -13,7 +13,7 @@ public abstract class AbstractMessenger implements DeliveryService {
     protected boolean checkDuplicated;
 
     protected DeliveryClient deliveryClient;
-    protected final Map<String, Set<Consumer<String>>> incomingConsumers = new HashMap<>();
+    protected final Map<String, Set<Consumer<String[]>>> incomingConsumers = new HashMap<>();
     protected Map<Integer, Long> cachedIds;
 
     public AbstractMessenger() {
@@ -43,7 +43,7 @@ public abstract class AbstractMessenger implements DeliveryService {
     }
 
     @NotNull
-    public Map<String, Set<Consumer<String>>> getIncomingConsumers() {
+    public Map<String, Set<Consumer<String[]>>> getIncomingConsumers() {
         return incomingConsumers;
     }
 
@@ -88,7 +88,7 @@ public abstract class AbstractMessenger implements DeliveryService {
         }
     }
 
-    public void subscribe(@NotNull String channel, @NotNull Consumer<String> incomingConsumer) {
+    public void subscribe(@NotNull String channel, @NotNull Consumer<String[]> incomingConsumer) {
         if (!incomingConsumers.containsKey(channel)) {
             incomingConsumers.put(channel, new HashSet<>());
         }
@@ -98,7 +98,7 @@ public abstract class AbstractMessenger implements DeliveryService {
         }
     }
 
-    public boolean send(@NotNull String channel, @NotNull String message) {
+    public boolean send(@NotNull String channel, @NotNull String... lines) {
         if (!isEnabled()) {
             return false;
         }
@@ -109,7 +109,10 @@ public abstract class AbstractMessenger implements DeliveryService {
                 cacheAdd(id);
                 out.writeInt(id);
             }
-            out.writeUTF(message);
+            out.writeInt(lines.length);
+            for (String message : lines) {
+                out.writeUTF(message);
+            }
             deliveryClient.send(channel, arrayOut.toByteArray());
             return true;
         } catch (IOException e) {
@@ -120,7 +123,7 @@ public abstract class AbstractMessenger implements DeliveryService {
 
     @Override
     public boolean receive(@NotNull String channel, byte[] bytes) {
-        final Set<Consumer<String>> consumers = incomingConsumers.get(channel);
+        final Set<Consumer<String[]>> consumers = incomingConsumers.get(channel);
         if (consumers == null || consumers.isEmpty()) {
             return false;
         }
@@ -129,9 +132,14 @@ public abstract class AbstractMessenger implements DeliveryService {
             if (checkDuplicated && cacheContains(in.readInt())) {
                 return false;
             }
-            final String message = in.readUTF();
-            for (Consumer<String> consumer : consumers) {
-                consumer.accept(message);
+            final String[] lines = new String[in.readInt()];
+            try {
+                for (int i = 0; i < lines.length; i++) {
+                    lines[i] = in.readUTF();
+                }
+            } catch (EOFException ignored) { }
+            for (Consumer<String[]> consumer : consumers) {
+                consumer.accept(lines);
             }
             return true;
         } catch (IOException e) {
