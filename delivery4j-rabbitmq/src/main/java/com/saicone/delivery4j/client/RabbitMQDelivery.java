@@ -68,7 +68,7 @@ public class RabbitMQDelivery extends DeliveryClient {
 
             // Second!
             // Create auto-delete queue
-            this.queue = cChannel.queueDeclare(queue, false, true, true, null).getQueue();
+            this.queue = cChannel.queueDeclare("", false, true, true, null).getQueue();
             // With auto-delete pre-channel (exchange in RabbitMQ)
             cChannel.exchangeDeclare(exchange, BuiltinExchangeType.TOPIC, false, true, null);
             // And subscribed channels (routing keys in RabbitMQ)
