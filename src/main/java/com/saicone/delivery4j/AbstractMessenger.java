@@ -17,7 +17,7 @@ public abstract class AbstractMessenger implements DeliveryService {
     protected Map<Integer, Long> cachedIds;
 
     public AbstractMessenger() {
-        this(false);
+        this(true);
     }
 
     public AbstractMessenger(boolean checkDuplicated) {
