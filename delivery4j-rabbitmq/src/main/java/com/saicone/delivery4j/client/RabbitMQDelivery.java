@@ -8,6 +8,11 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * RabbitMQ integration for data delivery.
+ *
+ * @author Rubenicos
+ */
 public class RabbitMQDelivery extends DeliveryClient {
 
     private final Connection connection;
@@ -19,6 +24,13 @@ public class RabbitMQDelivery extends DeliveryClient {
     private Runnable aliveTask = null;
     private boolean reconnected = false;
 
+    /**
+     * Create a RabbitMQDelivery client with provided parameters.
+     *
+     * @param url      the URL to connect with.
+     * @param exchange the pre-channel to use.
+     * @return         new RabbitMQDelivery instance.
+     */
     @NotNull
     public static RabbitMQDelivery of(@NotNull String url, @NotNull String exchange) {
         try {
@@ -28,6 +40,13 @@ public class RabbitMQDelivery extends DeliveryClient {
         }
     }
 
+    /**
+     * Create a RabbitMQDelivery client with provided parameters.
+     *
+     * @param uri      the URL object to connect with.
+     * @param exchange the pre-channel to use.
+     * @return         new RabbitMQDelivery instance.
+     */
     @NotNull
     public static RabbitMQDelivery of(@NotNull URI uri, @NotNull String exchange) {
         final ConnectionFactory factory = new ConnectionFactory();
@@ -39,6 +58,17 @@ public class RabbitMQDelivery extends DeliveryClient {
         }
     }
 
+    /**
+     * Create a RabbitMQDelivery client with provided parameters.
+     *
+     * @param host        the host to connect.
+     * @param port        the port host.
+     * @param username    the username to validate authentication.
+     * @param password    the password to validate authentication.
+     * @param virtualHost the virtual host.
+     * @param exchange    the pre-channel to use.
+     * @return            new RabbitMQDelivery instance.
+     */
     @NotNull
     public static RabbitMQDelivery of(@NotNull String host, int port, @NotNull String username, @NotNull String password, @NotNull String virtualHost, @NotNull String exchange) {
         final ConnectionFactory factory = new ConnectionFactory();
@@ -54,6 +84,12 @@ public class RabbitMQDelivery extends DeliveryClient {
         }
     }
 
+    /**
+     * Constructs a RabbitMQDelivery with provided parameters.
+     *
+     * @param connection the connection to interact with.
+     * @param exchange   the pre-channel to use.
+     */
     public RabbitMQDelivery(@NotNull Connection connection, @NotNull String exchange) {
         this.connection = connection;
         this.exchange = exchange;
@@ -147,6 +183,11 @@ public class RabbitMQDelivery extends DeliveryClient {
         }
     }
 
+    /**
+     * The current connection.
+     *
+     * @return a RabbitMQ connection object.
+     */
     @NotNull
     public Connection getConnection() {
         return connection;

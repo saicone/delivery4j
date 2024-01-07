@@ -7,6 +7,11 @@ import redis.clients.jedis.exceptions.JedisDataException;
 
 import java.net.URI;
 
+/**
+ * Redis integration for data delivery.
+ *
+ * @author Rubenicos
+ */
 public class RedisDelivery extends DeliveryClient {
 
     private final JedisPool pool;
@@ -15,6 +20,12 @@ public class RedisDelivery extends DeliveryClient {
 
     private Runnable aliveTask = null;
 
+    /**
+     * Create a RedisDelivery client with provided parameters.
+     *
+     * @param url the URL to connect with.
+     * @return    new RedisDelivery instance.
+     */
     @NotNull
     public static RedisDelivery of(@NotNull String url) {
         String password = "";
@@ -31,22 +42,52 @@ public class RedisDelivery extends DeliveryClient {
         }
     }
 
+    /**
+     * Create a RedisDelivery client with provided parameters.
+     *
+     * @param uri      the URL object to connect with.
+     * @param password the password to validate authentication.
+     * @return         new RedisDelivery instance.
+     */
     @NotNull
     public static RedisDelivery of(@NotNull URI uri, @NotNull String password) {
         return new RedisDelivery(new JedisPool(uri), password);
     }
 
+    /**
+     * Create a RedisDelivery client with provided parameters.
+     *
+     * @param host     the host to connect.
+     * @param port     the port host.
+     * @param password the password to validate authentication.
+     * @param database the database number.
+     * @param ssl      true to use SSL.
+     * @return         new RedisDelivery instance.
+     */
     @NotNull
     public static RedisDelivery of(@NotNull String host, int port, @NotNull String password, int database, boolean ssl) {
         return new RedisDelivery(new JedisPool(new JedisPoolConfig(), host, port, Protocol.DEFAULT_TIMEOUT, password, database, ssl), password);
     }
 
+    /**
+     * Constructs a RedisDelivery with provided parameters.
+     *
+     * @param pool     the pool to connect with.
+     * @param password the used redis password.
+     */
     public RedisDelivery(@NotNull JedisPool pool, @NotNull String password) {
         this.pool = pool;
         this.password = password;
         this.bridge = new Bridge();
     }
 
+    /**
+     * Constructs a RedisDelivery with provided parameters.
+     *
+     * @param pool     the pool to connect with.
+     * @param password the used redis password.
+     * @param bridge   the bridge to receive messages from redis.
+     */
     public RedisDelivery(@NotNull JedisPool pool, @NotNull String password, @NotNull Bridge bridge) {
         this.pool = pool;
         this.password = password;
@@ -114,16 +155,31 @@ public class RedisDelivery extends DeliveryClient {
         }
     }
 
+    /**
+     * The current pool.
+     *
+     * @return a jedis pool object.
+     */
     @NotNull
     public JedisPool getPool() {
         return pool;
     }
 
+    /**
+     * The current password for authentication.
+     *
+     * @return a String password.
+     */
     @NotNull
     public String getPassword() {
         return password;
     }
 
+    /**
+     * Get the current bridge to receive messages.
+     *
+     * @return a bridge instance.
+     */
     @NotNull
     public Bridge getBridge() {
         return bridge;
@@ -166,6 +222,9 @@ public class RedisDelivery extends DeliveryClient {
         }
     }
 
+    /**
+     * Bridge class to detect received messages from Redis database.
+     */
     public class Bridge extends JedisPubSub {
 
         @Override

@@ -10,6 +10,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+/**
+ * Sql integration for data delivery using Hikari library.
+ *
+ * @author Rubenicos
+ */
 public class HikariDelivery extends DeliveryClient {
 
     private final HikariDataSource hikari;
@@ -20,6 +25,15 @@ public class HikariDelivery extends DeliveryClient {
     private Runnable getTask = null;
     private Runnable cleanTask = null;
 
+    /**
+     * Create a HikariDelivery client with provided parameters.
+     *
+     * @param url         the URL to connect with.
+     * @param username    the username to validate authentication.
+     * @param password    the password to validate authentication.
+     * @param tablePrefix the table prefix.
+     * @return            new HikariDelivery instance.
+     */
     @NotNull
     public static HikariDelivery of(@NotNull String url, @NotNull String username, @NotNull String password, @NotNull String tablePrefix) {
         final HikariConfig config = new HikariConfig();
@@ -29,6 +43,12 @@ public class HikariDelivery extends DeliveryClient {
         return new HikariDelivery(new HikariDataSource(config), tablePrefix);
     }
 
+    /**
+     * Constructs a HikariDelivery with provided parameters.
+     *
+     * @param hikari      the hikari instance to make database connections.
+     * @param tablePrefix the used table prefix.
+     */
     public HikariDelivery(@NotNull HikariDataSource hikari, @NotNull String tablePrefix) {
         this.hikari = hikari;
         this.tablePrefix = tablePrefix;
@@ -100,11 +120,19 @@ public class HikariDelivery extends DeliveryClient {
         lock.readLock().unlock();
     }
 
+    /**
+     * Get the current hikari instance.
+     *
+     * @return a hikari instance.
+     */
     @NotNull
     public HikariDataSource getHikari() {
         return hikari;
     }
 
+    /**
+     * Get all unread messages from database.
+     */
     public void getMessages() {
         if (!enabled || !hikari.isRunning()) {
             return;
@@ -133,6 +161,9 @@ public class HikariDelivery extends DeliveryClient {
         lock.readLock().unlock();
     }
 
+    /**
+     * Clean old messages from database.
+     */
     public void cleanMessages() {
         if (!enabled || !hikari.isRunning()) {
             return;

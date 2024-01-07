@@ -8,56 +8,124 @@ import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 
+/**
+ * Messenger abstract class to send messages across channels using a {@link DeliveryClient}.
+ *
+ * @author Rubenicos
+ */
 public abstract class AbstractMessenger implements DeliveryService {
 
+    /**
+     * Check or not messages sent by this instance.
+     */
     protected boolean checkDuplicated;
 
+    /**
+     * Current delivery client.
+     */
     protected DeliveryClient deliveryClient;
+    /**
+     * Registered incoming consumers by channel ID.
+     */
     protected final Map<String, Set<Consumer<String[]>>> incomingConsumers = new HashMap<>();
+    /**
+     * Cached messages IDs sent by this instance.
+     */
     protected Map<Integer, Long> cachedIds;
 
+    /**
+     * Constructs a new messenger using check duplicated option by default.
+     */
     public AbstractMessenger() {
         this(true);
     }
 
+    /**
+     * Constructs a new messenger with specified parameters.
+     *
+     * @param checkDuplicated true to ignore messages sent by this instance.
+     */
     public AbstractMessenger(boolean checkDuplicated) {
         this.checkDuplicated = checkDuplicated;
     }
 
+    /**
+     * Get check duplicated status.
+     *
+     * @return true if messenger instance is ignoring sent messages.
+     */
     public boolean isCheckDuplicated() {
         return checkDuplicated;
     }
 
+    /**
+     * Get the current messenger status.
+     *
+     * @return true if the messenger is enabled.
+     */
     public boolean isEnabled() {
         return deliveryClient != null && deliveryClient.isEnabled();
     }
 
+    /**
+     * Get the current delivery client.
+     *
+     * @return a delivery client or null.
+     */
     @Nullable
     public DeliveryClient getDeliveryClient() {
         return deliveryClient;
     }
 
+    /**
+     * Get all the subscribed channels.
+     *
+     * @return a Set of channels IDs.
+     */
     @NotNull
     public Set<String> getSubscribedChannels() {
         return incomingConsumers.keySet();
     }
 
+    /**
+     * Get the incoming consumers.
+     *
+     * @return a map of message consumers separated by channels IDs.
+     */
     @NotNull
     public Map<String, Set<Consumer<String[]>>> getIncomingConsumers() {
         return incomingConsumers;
     }
 
+    /**
+     * Set check duplicated status.
+     *
+     * @param checkDuplicated true to ignore messages sent by this instance.
+     */
     public void setCheckDuplicated(boolean checkDuplicated) {
         this.checkDuplicated = checkDuplicated;
     }
 
+    /**
+     * Method to load the used delivery client on data transfer operations.
+     *
+     * @return an usable delivery client.
+     */
     @NotNull
     protected abstract DeliveryClient loadDeliveryClient();
 
+    /**
+     * Start the messenger instance.
+     */
     public void start() {
         start(loadDeliveryClient());
     }
 
+    /**
+     * Start the messenger instance with a provided delivery client.
+     *
+     * @param deliveryClient the delivery client to use.
+     */
     public void start(@NotNull DeliveryClient deliveryClient) {
         close();
 
@@ -72,12 +140,18 @@ public abstract class AbstractMessenger implements DeliveryService {
         this.deliveryClient.start();
     }
 
+    /**
+     * Stop the messenger instance.
+     */
     public void close() {
         if (deliveryClient != null) {
             deliveryClient.close();
         }
     }
 
+    /**
+     * Clear any delivery client channels and incoming consumers.
+     */
     public void clear() {
         if (deliveryClient != null) {
             deliveryClient.clear();
@@ -88,6 +162,12 @@ public abstract class AbstractMessenger implements DeliveryService {
         }
     }
 
+    /**
+     * Subscribe into a messaging channel by providing a consumer.
+     *
+     * @param channel          the channel ID.
+     * @param incomingConsumer the consumer that accept multiple line message.
+     */
     public void subscribe(@NotNull String channel, @NotNull Consumer<String[]> incomingConsumer) {
         if (!incomingConsumers.containsKey(channel)) {
             incomingConsumers.put(channel, new HashSet<>());
@@ -98,6 +178,13 @@ public abstract class AbstractMessenger implements DeliveryService {
         }
     }
 
+    /**
+     * Send message into channel.
+     *
+     * @param channel the channel ID.
+     * @param lines   the message to send.
+     * @return        true if the message was sent.
+     */
     public boolean send(@NotNull String channel, @Nullable Object... lines) {
         if (!isEnabled()) {
             return false;
@@ -149,14 +236,30 @@ public abstract class AbstractMessenger implements DeliveryService {
         }
     }
 
+    /**
+     * Create int-based id to detect duplicated messages.
+     *
+     * @return a random number.
+     */
     protected int createId() {
         return ThreadLocalRandom.current().nextInt(0, 999999 + 1);
     }
 
+    /**
+     * Add int id into cache to check later.
+     *
+     * @param id the number to save.
+     */
     protected void cacheAdd(int id) {
         cachedIds.put(id, System.currentTimeMillis() + 10000L);
     }
 
+    /**
+     * Check if the int id is cached to ignore.
+     *
+     * @param id the number to check.
+     * @return   true if the number is cached.
+     */
     protected boolean cacheContains(int id) {
         final long time = System.currentTimeMillis();
         cachedIds.entrySet().removeIf(entry -> entry.getValue() - time >= 10000);
