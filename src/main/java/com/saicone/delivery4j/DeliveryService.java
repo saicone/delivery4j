@@ -3,7 +3,6 @@ package com.saicone.delivery4j;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 
 @FunctionalInterface
 public interface DeliveryService {
@@ -18,25 +17,14 @@ public interface DeliveryService {
         // empty default method
     }
 
-    @NotNull
-    default Consumer<Boolean> async(@NotNull Runnable runnable) {
+    default @NotNull Runnable async(@NotNull Runnable runnable) {
         final Thread thread = new Thread(runnable);
         thread.start();
-        return bool -> {
-            if (bool == null) {
-                thread.interrupt();
-                thread.start();
-            } else if (!bool) {
-                thread.interrupt();
-            } else if (!thread.isAlive()) {
-                thread.start();
-            }
-        };
+        return thread::interrupt;
     }
 
-    @NotNull
     @SuppressWarnings("all")
-    default Consumer<Boolean> asyncRepeating(@NotNull Runnable runnable, long time, @NotNull TimeUnit unit) {
+    default @NotNull Runnable asyncRepeating(@NotNull Runnable runnable, long time, @NotNull TimeUnit unit) {
         final Thread thread = new Thread(() -> {
             while (!Thread.interrupted()) {
                 runnable.run();
@@ -48,16 +36,7 @@ public interface DeliveryService {
             }
         });
         thread.start();
-        return bool -> {
-            if (bool == null) {
-                thread.interrupt();
-                thread.start();
-            } else if (!bool) {
-                thread.interrupt();
-            } else if (!thread.isAlive()) {
-                thread.start();
-            }
-        };
+        return thread::interrupt;
     }
 
 }

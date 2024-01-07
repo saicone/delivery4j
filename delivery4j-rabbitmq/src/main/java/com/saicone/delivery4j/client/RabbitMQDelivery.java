@@ -7,7 +7,6 @@ import org.jetbrains.annotations.NotNull;
 import java.io.IOException;
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 
 public class RabbitMQDelivery extends DeliveryClient {
 
@@ -17,7 +16,7 @@ public class RabbitMQDelivery extends DeliveryClient {
     private Channel cChannel = null;
     private String queue = null;
 
-    private Consumer<Boolean> aliveTask = null;
+    private Runnable aliveTask = null;
     private boolean reconnected = false;
 
     @NotNull
@@ -99,8 +98,6 @@ public class RabbitMQDelivery extends DeliveryClient {
         // Maintain the connection alive
         if (aliveTask == null) {
             aliveTask = asyncRepeating(this::alive, 30, TimeUnit.SECONDS);
-        } else {
-            aliveTask.accept(true);
         }
     }
 
@@ -109,7 +106,7 @@ public class RabbitMQDelivery extends DeliveryClient {
         close(cChannel, connection);
         cChannel = null;
         if (aliveTask != null) {
-            aliveTask.accept(false);
+            aliveTask.run();
             aliveTask = null;
         }
     }

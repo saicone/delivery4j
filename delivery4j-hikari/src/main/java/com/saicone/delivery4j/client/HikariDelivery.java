@@ -9,7 +9,6 @@ import java.sql.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.Consumer;
 
 public class HikariDelivery extends DeliveryClient {
 
@@ -18,8 +17,8 @@ public class HikariDelivery extends DeliveryClient {
 
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private long currentID = -1;
-    private Consumer<Boolean> getTask = null;
-    private Consumer<Boolean> cleanTask = null;
+    private Runnable getTask = null;
+    private Runnable cleanTask = null;
 
     @NotNull
     public static HikariDelivery of(@NotNull String url, @NotNull String username, @NotNull String password, @NotNull String tablePrefix) {
@@ -62,13 +61,9 @@ public class HikariDelivery extends DeliveryClient {
             enabled = true;
             if (getTask == null) {
                 getTask = asyncRepeating(this::getMessages, 10, TimeUnit.SECONDS);
-            } else {
-                getTask.accept(true);
             }
             if (cleanTask == null) {
                 cleanTask = asyncRepeating(this::cleanMessages, 30, TimeUnit.SECONDS);
-            } else {
-                cleanTask.accept(true);
             }
         } catch (SQLException e) {
             log(e);
@@ -79,10 +74,10 @@ public class HikariDelivery extends DeliveryClient {
     public void onClose() {
         hikari.close();
         if (getTask != null) {
-            getTask.accept(false);
+            getTask.run();
         }
         if (cleanTask != null) {
-            cleanTask.accept(false);
+            cleanTask.run();
         }
     }
 

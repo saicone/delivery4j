@@ -5,7 +5,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 
 public abstract class DeliveryClient {
 
@@ -123,7 +122,7 @@ public abstract class DeliveryClient {
     }
 
     @NotNull
-    protected Consumer<Boolean> async(@NotNull Runnable runnable) {
+    protected Runnable async(@NotNull Runnable runnable) {
         if (service == null) {
             throw new IllegalStateException("Cannot execute async operation without delivery service");
         }
@@ -131,7 +130,7 @@ public abstract class DeliveryClient {
     }
 
     @NotNull
-    protected Consumer<Boolean> asyncRepeating(@NotNull Runnable runnable, long time, @NotNull TimeUnit unit) {
+    protected Runnable asyncRepeating(@NotNull Runnable runnable, long time, @NotNull TimeUnit unit) {
         if (service == null) {
             throw new IllegalStateException("Cannot execute async operation without delivery service");
         }

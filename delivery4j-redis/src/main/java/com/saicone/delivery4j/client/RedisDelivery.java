@@ -6,7 +6,6 @@ import redis.clients.jedis.*;
 import redis.clients.jedis.exceptions.JedisDataException;
 
 import java.net.URI;
-import java.util.function.Consumer;
 
 public class RedisDelivery extends DeliveryClient {
 
@@ -14,7 +13,7 @@ public class RedisDelivery extends DeliveryClient {
     private final String password;
     private final Bridge bridge;
 
-    private Consumer<Boolean> aliveTask = null;
+    private Runnable aliveTask = null;
 
     @NotNull
     public static RedisDelivery of(@NotNull String url) {
@@ -70,7 +69,7 @@ public class RedisDelivery extends DeliveryClient {
         } catch (Throwable ignored) { }
         pool.destroy();
         if (aliveTask != null) {
-            aliveTask.accept(false);
+            aliveTask.run();
             aliveTask = null;
         }
     }
@@ -81,7 +80,8 @@ public class RedisDelivery extends DeliveryClient {
             bridge.unsubscribe();
         } catch (Throwable ignored) { }
         if (aliveTask != null) {
-            aliveTask.accept(null);
+            aliveTask.run();
+            aliveTask = async(this::alive);
         }
     }
 
@@ -91,7 +91,8 @@ public class RedisDelivery extends DeliveryClient {
             bridge.unsubscribe();
         } catch (Throwable ignored) { }
         if (aliveTask != null) {
-            aliveTask.accept(null);
+            aliveTask.run();
+            aliveTask = async(this::alive);
         }
     }
 
