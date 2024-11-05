@@ -1,5 +1,5 @@
 dependencies {
-    api 'redis.clients:jedis:5.1.0'
+    api 'redis.clients:jedis:5.2.0'
 }
 
 publishing {

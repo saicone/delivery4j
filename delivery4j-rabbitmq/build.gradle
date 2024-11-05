@@ -1,5 +1,5 @@
 dependencies {
-    api 'com.rabbitmq:amqp-client:5.20.0'
+    api 'com.rabbitmq:amqp-client:5.22.0'
 }
 
 publishing {

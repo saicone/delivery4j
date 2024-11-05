@@ -8,7 +8,7 @@ allprojects {
     }
 
     dependencies {
-        compileOnly 'org.jetbrains:annotations:24.1.0'
+        compileOnly 'org.jetbrains:annotations:26.0.1'
     }
 
     compileJava {
@@ -16,8 +16,8 @@ allprojects {
     }
 
     java {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
         withSourcesJar()
         withJavadocJar()
     }
