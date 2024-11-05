@@ -14,14 +14,14 @@ jobs:
       - uses: actions/setup-java@v3
         with:
           distribution: adopt
-          java-version: 8
+          java-version: 11
 
       - name: Build javadoc with Gradle
         run: gradle allJavadoc
         shell: bash
 
       - name: Deploy javadoc to Github repository
-        uses: JamesIves/github-pages-deploy-action@v4.4.1
+        uses: JamesIves/github-pages-deploy-action@v4.6.1
         with:
           folder: build/docs/all-javadoc
           ssh-key: ${{ secrets.JAVADOC_DEPLOY_KEY }}
