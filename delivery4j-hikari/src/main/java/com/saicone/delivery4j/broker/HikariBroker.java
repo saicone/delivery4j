@@ -1,6 +1,6 @@
-package com.saicone.delivery4j.client;
+package com.saicone.delivery4j.broker;
 
-import com.saicone.delivery4j.DeliveryClient;
+import com.saicone.delivery4j.Broker;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.jetbrains.annotations.NotNull;
@@ -15,15 +15,15 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  *
  * @author Rubenicos
  */
-public class HikariDelivery extends DeliveryClient {
+public class HikariBroker extends Broker<HikariBroker> {
 
     private final HikariDataSource hikari;
     private final String tablePrefix;
 
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private long currentID = -1;
-    private Runnable getTask = null;
-    private Runnable cleanTask = null;
+    private Object getTask = null;
+    private Object cleanTask = null;
 
     /**
      * Create a HikariDelivery client with provided parameters.
@@ -35,12 +35,12 @@ public class HikariDelivery extends DeliveryClient {
      * @return            new HikariDelivery instance.
      */
     @NotNull
-    public static HikariDelivery of(@NotNull String url, @NotNull String username, @NotNull String password, @NotNull String tablePrefix) {
+    public static HikariBroker of(@NotNull String url, @NotNull String username, @NotNull String password, @NotNull String tablePrefix) {
         final HikariConfig config = new HikariConfig();
         config.setJdbcUrl(url);
         config.setUsername(username);
         config.setPassword(password);
-        return new HikariDelivery(new HikariDataSource(config), tablePrefix);
+        return new HikariBroker(new HikariDataSource(config), tablePrefix);
     }
 
     /**
@@ -49,13 +49,13 @@ public class HikariDelivery extends DeliveryClient {
      * @param hikari      the hikari instance to make database connections.
      * @param tablePrefix the used table prefix.
      */
-    public HikariDelivery(@NotNull HikariDataSource hikari, @NotNull String tablePrefix) {
+    public HikariBroker(@NotNull HikariDataSource hikari, @NotNull String tablePrefix) {
         this.hikari = hikari;
         this.tablePrefix = tablePrefix;
     }
 
     @Override
-    public void onStart() {
+    protected void onStart() {
         try (Connection connection = hikari.getConnection()) {
             String createTable = "CREATE TABLE IF NOT EXISTS `" + tablePrefix + "messenger` (`id` INT AUTO_INCREMENT NOT NULL, `time` TIMESTAMP NOT NULL, `channel` VARCHAR(255) NOT NULL, `msg` TEXT NOT NULL, PRIMARY KEY (`id`)) DEFAULT CHARSET = utf8mb4";
             // Taken from LuckPerms
@@ -78,12 +78,12 @@ public class HikariDelivery extends DeliveryClient {
                     }
                 }
             }
-            enabled = true;
+            setEnabled(true);
             if (getTask == null) {
-                getTask = asyncRepeating(this::getMessages, 10, TimeUnit.SECONDS);
+                getTask = getExecutor().execute(this::getMessages, 10, 10, TimeUnit.SECONDS);
             }
             if (cleanTask == null) {
-                cleanTask = asyncRepeating(this::cleanMessages, 30, TimeUnit.SECONDS);
+                cleanTask = getExecutor().execute(this::cleanMessages, 30, 30, TimeUnit.SECONDS);
             }
         } catch (SQLException e) {
             log(1, e);
@@ -91,19 +91,21 @@ public class HikariDelivery extends DeliveryClient {
     }
 
     @Override
-    public void onClose() {
+    protected void onClose() {
         hikari.close();
         if (getTask != null) {
-            getTask.run();
+            getExecutor().cancel(getTask);
+            getTask = null;
         }
         if (cleanTask != null) {
-            cleanTask.run();
+            getExecutor().cancel(cleanTask);
+            cleanTask = null;
         }
     }
 
     @Override
-    public void onSend(@NotNull String channel, byte[] data) {
-        if (!enabled) {
+    protected void onSend(@NotNull String channel, byte[] data) {
+        if (!isEnabled()) {
             return;
         }
         lock.readLock().lock();
@@ -111,13 +113,18 @@ public class HikariDelivery extends DeliveryClient {
         try (Connection connection = hikari.getConnection()) {
             try (PreparedStatement statement = connection.prepareStatement("INSERT INTO `" + tablePrefix + "messenger` (`time`, `channel`, `msg`) VALUES(NOW(), ?, ?)")) {
                 statement.setString(1, channel);
-                statement.setString(2, toBase64(data));
+                statement.setString(2, getCodec().encode(data));
                 statement.execute();
             }
         } catch (SQLException e) {
             log(2, e);
         }
         lock.readLock().unlock();
+    }
+
+    @Override
+    protected @NotNull HikariBroker get() {
+        return this;
     }
 
     /**
@@ -134,7 +141,7 @@ public class HikariDelivery extends DeliveryClient {
      * Get all unread messages from database.
      */
     public void getMessages() {
-        if (!enabled || !hikari.isRunning()) {
+        if (!isEnabled() || !hikari.isRunning()) {
             return;
         }
         lock.readLock().lock();
@@ -149,8 +156,8 @@ public class HikariDelivery extends DeliveryClient {
 
                         String channel = rs.getString("channel");
                         String message = rs.getString("msg");
-                        if (subscribedChannels.contains(channel) && message != null) {
-                            receive(channel, fromBase64(message));
+                        if (getSubscribedChannels().contains(channel) && message != null) {
+                            receive(channel, getCodec().decode(message));
                         }
                     }
                 }
@@ -165,7 +172,7 @@ public class HikariDelivery extends DeliveryClient {
      * Clean old messages from database.
      */
     public void cleanMessages() {
-        if (!enabled || !hikari.isRunning()) {
+        if (!isEnabled() || !hikari.isRunning()) {
             return;
         }
         lock.readLock().lock();

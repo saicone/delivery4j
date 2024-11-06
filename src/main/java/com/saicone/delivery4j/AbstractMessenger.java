@@ -1,5 +1,6 @@
 package com.saicone.delivery4j;
 
+import com.saicone.delivery4j.util.Encryptor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -9,11 +10,11 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 
 /**
- * Messenger abstract class to send messages across channels using a {@link DeliveryClient}.
+ * Messenger abstract class to send messages across channels using a {@link Broker}.
  *
  * @author Rubenicos
  */
-public abstract class AbstractMessenger implements DeliveryService {
+public abstract class AbstractMessenger {
 
     /**
      * Check or not messages sent by this instance.
@@ -23,7 +24,8 @@ public abstract class AbstractMessenger implements DeliveryService {
     /**
      * Current delivery client.
      */
-    protected DeliveryClient deliveryClient;
+    protected Broker<?> broker;
+    private Encryptor encryptor;
     /**
      * Registered incoming consumers by channel ID.
      */
@@ -64,7 +66,7 @@ public abstract class AbstractMessenger implements DeliveryService {
      * @return true if the messenger is enabled.
      */
     public boolean isEnabled() {
-        return deliveryClient != null && deliveryClient.isEnabled();
+        return broker != null && broker.isEnabled();
     }
 
     /**
@@ -73,8 +75,8 @@ public abstract class AbstractMessenger implements DeliveryService {
      * @return a delivery client or null.
      */
     @Nullable
-    public DeliveryClient getDeliveryClient() {
-        return deliveryClient;
+    public Broker<?> getDeliveryClient() {
+        return broker;
     }
 
     /**
@@ -112,7 +114,7 @@ public abstract class AbstractMessenger implements DeliveryService {
      * @return an usable delivery client.
      */
     @NotNull
-    protected abstract DeliveryClient loadDeliveryClient();
+    protected abstract Broker<?> loadDeliveryClient();
 
     /**
      * Start the messenger instance.
@@ -124,28 +126,28 @@ public abstract class AbstractMessenger implements DeliveryService {
     /**
      * Start the messenger instance with a provided delivery client.
      *
-     * @param deliveryClient the delivery client to use.
+     * @param broker the delivery client to use.
      */
-    public void start(@NotNull DeliveryClient deliveryClient) {
+    public void start(@NotNull Broker<?> broker) {
         close();
 
-        deliveryClient.getSubscribedChannels().addAll(getSubscribedChannels());
-        deliveryClient.setService(this);
+        broker.getSubscribedChannels().addAll(getSubscribedChannels());
+        broker.consumer(this::receive);
 
         if (this.checkDuplicated && this.cachedIds == null) {
             this.cachedIds = new HashMap<>();
         }
 
-        this.deliveryClient = deliveryClient;
-        this.deliveryClient.start();
+        this.broker = broker;
+        this.broker.start();
     }
 
     /**
      * Stop the messenger instance.
      */
     public void close() {
-        if (deliveryClient != null) {
-            deliveryClient.close();
+        if (broker != null) {
+            broker.close();
         }
     }
 
@@ -153,8 +155,8 @@ public abstract class AbstractMessenger implements DeliveryService {
      * Clear any delivery client channels and incoming consumers.
      */
     public void clear() {
-        if (deliveryClient != null) {
-            deliveryClient.clear();
+        if (broker != null) {
+            broker.clear();
         }
         incomingConsumers.clear();
         if (cachedIds != null) {
@@ -173,8 +175,8 @@ public abstract class AbstractMessenger implements DeliveryService {
             incomingConsumers.put(channel, new HashSet<>());
         }
         incomingConsumers.get(channel).add(incomingConsumer);
-        if (deliveryClient != null) {
-            deliveryClient.subscribe(channel);
+        if (broker != null) {
+            broker.subscribe(channel);
         }
     }
 
@@ -197,10 +199,22 @@ public abstract class AbstractMessenger implements DeliveryService {
                 out.writeInt(id);
             }
             out.writeInt(lines.length);
-            for (Object message : lines) {
-                out.writeUTF(Objects.toString(message));
+            if (encryptor == null) {
+                for (Object message : lines) {
+                    out.writeUTF(Objects.toString(message));
+                }
+            } else {
+                try {
+                    for (Object message : lines) {
+                        final byte[] bytes = encryptor.encrypt(Objects.toString(message));
+                        out.writeInt(bytes.length);
+                        out.write(bytes);
+                    }
+                } catch (Throwable t) {
+                    t.printStackTrace();
+                }
             }
-            deliveryClient.send(channel, arrayOut.toByteArray());
+            broker.send(channel, arrayOut.toByteArray());
             return true;
         } catch (IOException e) {
             log(2, e);
@@ -208,7 +222,6 @@ public abstract class AbstractMessenger implements DeliveryService {
         }
     }
 
-    @Override
     public boolean receive(@NotNull String channel, byte[] bytes) {
         final Set<Consumer<String[]>> consumers = incomingConsumers.get(channel);
         if (consumers == null || consumers.isEmpty()) {
@@ -221,9 +234,20 @@ public abstract class AbstractMessenger implements DeliveryService {
             }
             final String[] lines = new String[in.readInt()];
             try {
-                for (int i = 0; i < lines.length; i++) {
-                    final String message = in.readUTF();
-                    lines[i] = message.equalsIgnoreCase("null") ? null : message;
+                if (encryptor == null) {
+                    for (int i = 0; i < lines.length; i++) {
+                        final String message = in.readUTF();
+                        lines[i] = message.equalsIgnoreCase("null") ? null : message;
+                    }
+                } else {
+                    try {
+                        for (int i = 0; i < lines.length; i++) {
+                            final String message = encryptor.decrypt(in.readNBytes(in.readInt()));
+                            lines[i] = message.equalsIgnoreCase("null") ? null : message;
+                        }
+                    } catch (Throwable t) {
+                        t.printStackTrace();
+                    }
                 }
             } catch (EOFException ignored) { }
             for (Consumer<String[]> consumer : consumers) {

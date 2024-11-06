@@ -1,6 +1,6 @@
-package com.saicone.delivery4j.client;
+package com.saicone.delivery4j.broker;
 
-import com.saicone.delivery4j.DeliveryClient;
+import com.saicone.delivery4j.Broker;
 import org.jetbrains.annotations.NotNull;
 import redis.clients.jedis.*;
 import redis.clients.jedis.exceptions.JedisDataException;
@@ -12,13 +12,11 @@ import java.net.URI;
  *
  * @author Rubenicos
  */
-public class RedisDelivery extends DeliveryClient {
+public class RedisBroker extends Broker<RedisBroker> {
 
     private final JedisPool pool;
     private final String password;
     private final Bridge bridge;
-
-    private Runnable aliveTask = null;
 
     /**
      * Create a RedisDelivery client with provided parameters.
@@ -27,7 +25,7 @@ public class RedisDelivery extends DeliveryClient {
      * @return    new RedisDelivery instance.
      */
     @NotNull
-    public static RedisDelivery of(@NotNull String url) {
+    public static RedisBroker of(@NotNull String url) {
         String password = "";
         if (url.contains("@")) {
             final String s = url.substring(0, url.lastIndexOf("@"));
@@ -50,8 +48,8 @@ public class RedisDelivery extends DeliveryClient {
      * @return         new RedisDelivery instance.
      */
     @NotNull
-    public static RedisDelivery of(@NotNull URI uri, @NotNull String password) {
-        return new RedisDelivery(new JedisPool(uri), password);
+    public static RedisBroker of(@NotNull URI uri, @NotNull String password) {
+        return new RedisBroker(new JedisPool(uri), password);
     }
 
     /**
@@ -65,8 +63,8 @@ public class RedisDelivery extends DeliveryClient {
      * @return         new RedisDelivery instance.
      */
     @NotNull
-    public static RedisDelivery of(@NotNull String host, int port, @NotNull String password, int database, boolean ssl) {
-        return new RedisDelivery(new JedisPool(new JedisPoolConfig(), host, port, Protocol.DEFAULT_TIMEOUT, password, database, ssl), password);
+    public static RedisBroker of(@NotNull String host, int port, @NotNull String password, int database, boolean ssl) {
+        return new RedisBroker(new JedisPool(new JedisPoolConfig(), host, port, Protocol.DEFAULT_TIMEOUT, password, database, ssl), password);
     }
 
     /**
@@ -75,7 +73,7 @@ public class RedisDelivery extends DeliveryClient {
      * @param pool     the pool to connect with.
      * @param password the used redis password.
      */
-    public RedisDelivery(@NotNull JedisPool pool, @NotNull String password) {
+    public RedisBroker(@NotNull JedisPool pool, @NotNull String password) {
         this.pool = pool;
         this.password = password;
         this.bridge = new Bridge();
@@ -88,59 +86,49 @@ public class RedisDelivery extends DeliveryClient {
      * @param password the used redis password.
      * @param bridge   the bridge to receive messages from redis.
      */
-    public RedisDelivery(@NotNull JedisPool pool, @NotNull String password, @NotNull Bridge bridge) {
+    public RedisBroker(@NotNull JedisPool pool, @NotNull String password, @NotNull Bridge bridge) {
         this.pool = pool;
         this.password = password;
         this.bridge = bridge;
     }
 
     @Override
-    public void onStart() {
-        enabled = true;
+    protected void onStart() {
+        setEnabled(true);
         // Jedis connection is a blocking operation.
         // So new thread is needed to not block the main thread
-        aliveTask = async(this::alive);
+        getExecutor().execute(this::alive);
     }
 
     @Override
-    public void onClose() {
-        enabled = false;
+    protected void onClose() {
+        setEnabled(false);
         try {
             bridge.unsubscribe();
         } catch (Throwable ignored) { }
         pool.destroy();
-        if (aliveTask != null) {
-            aliveTask.run();
-            aliveTask = null;
-        }
     }
 
     @Override
-    public void onSubscribe(@NotNull String... channels) {
+    protected void onSubscribe(@NotNull String... channels) {
         try {
             bridge.unsubscribe();
         } catch (Throwable ignored) { }
-        if (aliveTask != null) {
-            aliveTask.run();
-            aliveTask = async(this::alive);
-        }
+        getExecutor().execute(this::alive);
     }
 
     @Override
-    public void onUnsubscribe(@NotNull String... channels) {
+    protected void onUnsubscribe(@NotNull String... channels) {
         try {
             bridge.unsubscribe();
         } catch (Throwable ignored) { }
-        if (aliveTask != null) {
-            aliveTask.run();
-            aliveTask = async(this::alive);
-        }
+        getExecutor().execute(this::alive);
     }
 
     @Override
-    public void onSend(@NotNull String channel, byte[] data) {
+    protected void onSend(@NotNull String channel, byte[] data) {
         try (Jedis jedis = pool.getResource()) {
-            final String message = toBase64(data);
+            final String message = getCodec().encode(data);
             try {
                 jedis.publish(channel, message);
             } catch (JedisDataException e) {
@@ -153,6 +141,11 @@ public class RedisDelivery extends DeliveryClient {
                 }
             }
         }
+    }
+
+    @Override
+    protected @NotNull RedisBroker get() {
+        return this;
     }
 
     /**
@@ -188,16 +181,16 @@ public class RedisDelivery extends DeliveryClient {
     @SuppressWarnings("all")
     private void alive() {
         boolean reconnected = false;
-        while (enabled && !Thread.interrupted() && pool != null && !pool.isClosed()) {
+        while (isEnabled() && !Thread.interrupted() && pool != null && !pool.isClosed()) {
             try (Jedis jedis = pool.getResource()) {
                 if (reconnected) {
                     log(3, "Redis connection is alive again");
                 }
                 // Subscribe channels and lock the thread
-                jedis.subscribe(bridge, subscribedChannels.toArray(new String[0]));
+                jedis.subscribe(bridge, getSubscribedChannels().toArray(new String[0]));
             } catch (Throwable t) {
                 // Thread was unlocked due error
-                if (enabled) {
+                if (isEnabled()) {
                     if (reconnected) {
                         log(2, "Redis connection dropped, automatic reconnection in 8 seconds...\n" + t.getMessage());
                     }
@@ -229,8 +222,8 @@ public class RedisDelivery extends DeliveryClient {
 
         @Override
         public void onMessage(String channel, String message) {
-            if (channel != null && subscribedChannels.contains(channel) && message != null) {
-                receive(channel, fromBase64(message));
+            if (channel != null && RedisBroker.this.getSubscribedChannels().contains(channel) && message != null) {
+                receive(channel, getCodec().decode(message));
             }
         }
 

@@ -1,7 +1,7 @@
-package com.saicone.delivery4j.client;
+package com.saicone.delivery4j.broker;
 
 import com.rabbitmq.client.*;
-import com.saicone.delivery4j.DeliveryClient;
+import com.saicone.delivery4j.Broker;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
  *
  * @author Rubenicos
  */
-public class RabbitMQDelivery extends DeliveryClient {
+public class RabbitMQBroker extends Broker<RabbitMQBroker> {
 
     private final Connection connection;
     private final String exchange;
@@ -21,7 +21,7 @@ public class RabbitMQDelivery extends DeliveryClient {
     private Channel cChannel = null;
     private String queue = null;
 
-    private Runnable aliveTask = null;
+    private Object aliveTask = null;
     private boolean reconnected = false;
 
     /**
@@ -32,7 +32,7 @@ public class RabbitMQDelivery extends DeliveryClient {
      * @return         new RabbitMQDelivery instance.
      */
     @NotNull
-    public static RabbitMQDelivery of(@NotNull String url, @NotNull String exchange) {
+    public static RabbitMQBroker of(@NotNull String url, @NotNull String exchange) {
         try {
             return of(new URI(url), exchange);
         } catch (Exception e) {
@@ -48,11 +48,11 @@ public class RabbitMQDelivery extends DeliveryClient {
      * @return         new RabbitMQDelivery instance.
      */
     @NotNull
-    public static RabbitMQDelivery of(@NotNull URI uri, @NotNull String exchange) {
+    public static RabbitMQBroker of(@NotNull URI uri, @NotNull String exchange) {
         final ConnectionFactory factory = new ConnectionFactory();
         try {
             factory.setUri(uri);
-            return new RabbitMQDelivery(factory.newConnection(), exchange);
+            return new RabbitMQBroker(factory.newConnection(), exchange);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -70,7 +70,7 @@ public class RabbitMQDelivery extends DeliveryClient {
      * @return            new RabbitMQDelivery instance.
      */
     @NotNull
-    public static RabbitMQDelivery of(@NotNull String host, int port, @NotNull String username, @NotNull String password, @NotNull String virtualHost, @NotNull String exchange) {
+    public static RabbitMQBroker of(@NotNull String host, int port, @NotNull String username, @NotNull String password, @NotNull String virtualHost, @NotNull String exchange) {
         final ConnectionFactory factory = new ConnectionFactory();
         factory.setHost(host);
         factory.setPort(port);
@@ -78,7 +78,7 @@ public class RabbitMQDelivery extends DeliveryClient {
         factory.setPassword(password);
         factory.setVirtualHost(virtualHost);
         try {
-            return new RabbitMQDelivery(factory.newConnection(), exchange);
+            return new RabbitMQBroker(factory.newConnection(), exchange);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -90,13 +90,13 @@ public class RabbitMQDelivery extends DeliveryClient {
      * @param connection the connection to interact with.
      * @param exchange   the pre-channel to use.
      */
-    public RabbitMQDelivery(@NotNull Connection connection, @NotNull String exchange) {
+    public RabbitMQBroker(@NotNull Connection connection, @NotNull String exchange) {
         this.connection = connection;
         this.exchange = exchange;
     }
 
     @Override
-    public void onStart() {
+    protected void onStart() {
         // Random stuff, let's go!
         try {
             // First, create a channel
@@ -108,7 +108,7 @@ public class RabbitMQDelivery extends DeliveryClient {
             // With auto-delete pre-channel (exchange in RabbitMQ)
             cChannel.exchangeDeclare(exchange, BuiltinExchangeType.TOPIC, false, true, null);
             // And subscribed channels (routing keys in RabbitMQ)
-            for (String channel : subscribedChannels) {
+            for (String channel : getSubscribedChannels()) {
                 cChannel.queueBind(this.queue, exchange, channel);
             }
 
@@ -116,7 +116,7 @@ public class RabbitMQDelivery extends DeliveryClient {
             // Register callback for message delivery
             cChannel.basicConsume(this.queue, true, (consumerTag, message) -> {
                 final String channel = message.getEnvelope().getRoutingKey();
-                if (subscribedChannels.contains(channel)) {
+                if (getSubscribedChannels().contains(channel)) {
                     receive(channel, message.getBody());
                 }
             }, __ -> {}); // Without canceled delivery
@@ -125,7 +125,7 @@ public class RabbitMQDelivery extends DeliveryClient {
                 log(3, "RabbitMQ connection is alive again");
                 reconnected = false;
             }
-            enabled = true;
+            setEnabled(true);
         } catch (Throwable t) {
             log(1, t);
             return;
@@ -133,22 +133,22 @@ public class RabbitMQDelivery extends DeliveryClient {
 
         // Maintain the connection alive
         if (aliveTask == null) {
-            aliveTask = asyncRepeating(this::alive, 30, TimeUnit.SECONDS);
+            aliveTask = getExecutor().execute(this::alive, 30, 30, TimeUnit.SECONDS);
         }
     }
 
     @Override
-    public void onClose() {
+    protected void onClose() {
         close(cChannel, connection);
         cChannel = null;
         if (aliveTask != null) {
-            aliveTask.run();
+            getExecutor().cancel(aliveTask);
             aliveTask = null;
         }
     }
 
     @Override
-    public void onSubscribe(@NotNull String... channels) {
+    protected void onSubscribe(@NotNull String... channels) {
         for (String channel : channels) {
             try {
                 cChannel.queueBind(queue, exchange, channel);
@@ -159,7 +159,7 @@ public class RabbitMQDelivery extends DeliveryClient {
     }
 
     @Override
-    public void onUnsubscribe(@NotNull String... channels) {
+    protected void onUnsubscribe(@NotNull String... channels) {
         for (String channel : channels) {
             try {
                 cChannel.queueUnbind(queue, exchange, channel);
@@ -170,7 +170,7 @@ public class RabbitMQDelivery extends DeliveryClient {
     }
 
     @Override
-    public void onSend(@NotNull String channel, byte[] data) {
+    protected void onSend(@NotNull String channel, byte[] data) {
         if (cChannel == null) {
             return;
         }
@@ -181,6 +181,11 @@ public class RabbitMQDelivery extends DeliveryClient {
         } catch (Throwable t) {
             log(2, t);
         }
+    }
+
+    @Override
+    protected @NotNull RabbitMQBroker get() {
+        return this;
     }
 
     /**
@@ -195,18 +200,18 @@ public class RabbitMQDelivery extends DeliveryClient {
 
     @SuppressWarnings("all")
     private void alive() {
-        if (!enabled) {
+        if (!isEnabled()) {
             return;
         }
         if (connection == null || !connection.isOpen() || cChannel == null || !cChannel.isOpen()) {
             close(cChannel, connection);
             cChannel = null;
             reconnected = true;
-            enabled = false;
+            setEnabled(false);
             while (true) {
                 log(2, "RabbitMQ connection dropped, automatic reconnection every 8 seconds...");
                 onStart();
-                if (!enabled && !Thread.interrupted()) {
+                if (!isEnabled() && !Thread.interrupted()) {
                     try {
                         Thread.sleep(8000);
                     } catch (InterruptedException e) {
