@@ -2,20 +2,21 @@ package com.saicone.delivery4j.util;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
-public interface DelayedExecutor<T> extends Executor {
+public interface DelayedExecutor<T> {
 
     DelayedExecutor<Thread> JAVA = new DelayedExecutor<>() {
         @Override
-        public void execute(@NotNull Runnable command) {
-            new Thread(command).start();
+        public @NotNull Thread execute(@NotNull Runnable command) {
+            final Thread thread = new Thread(command);
+            thread.start();
+            return thread;
         }
 
         @Override
         public @NotNull Thread execute(@NotNull Runnable command, long delay, @NotNull TimeUnit unit) {
-            return new Thread(() -> {
+            final Thread thread = new Thread(() -> {
                 try {
                     Thread.sleep(unit.toMillis(delay));
                 } catch (InterruptedException e) {
@@ -25,11 +26,13 @@ public interface DelayedExecutor<T> extends Executor {
                     command.run();
                 }
             });
+            thread.start();
+            return thread;
         }
 
         @Override
         public @NotNull Thread execute(@NotNull Runnable command, long delay, long period, @NotNull TimeUnit unit) {
-            return new Thread(() -> {
+            final Thread thread = new Thread(() -> {
                 if (delay > 0) {
                     try {
                         Thread.sleep(unit.toMillis(delay));
@@ -46,6 +49,8 @@ public interface DelayedExecutor<T> extends Executor {
                     }
                 }
             });
+            thread.start();
+            return thread;
         }
 
         @Override
@@ -53,6 +58,9 @@ public interface DelayedExecutor<T> extends Executor {
             thread.interrupt();
         }
     };
+
+    @NotNull
+    T execute(@NotNull Runnable command);
 
     @NotNull
     T execute(@NotNull Runnable command, long delay, @NotNull TimeUnit unit);

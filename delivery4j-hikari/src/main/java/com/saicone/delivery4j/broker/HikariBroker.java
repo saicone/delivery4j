@@ -5,6 +5,7 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.IOException;
 import java.sql.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -86,7 +87,7 @@ public class HikariBroker extends Broker<HikariBroker> {
                 cleanTask = getExecutor().execute(this::cleanMessages, 30, 30, TimeUnit.SECONDS);
             }
         } catch (SQLException e) {
-            log(1, e);
+            getLogger().log(1, "Cannot start hikari connection", e);
         }
     }
 
@@ -104,7 +105,7 @@ public class HikariBroker extends Broker<HikariBroker> {
     }
 
     @Override
-    protected void onSend(@NotNull String channel, byte[] data) {
+    protected void onSend(@NotNull String channel, byte[] data) throws IOException {
         if (!isEnabled()) {
             return;
         }
@@ -117,7 +118,7 @@ public class HikariBroker extends Broker<HikariBroker> {
                 statement.execute();
             }
         } catch (SQLException e) {
-            log(2, e);
+            throw new IOException(e);
         }
         lock.readLock().unlock();
     }
@@ -157,13 +158,17 @@ public class HikariBroker extends Broker<HikariBroker> {
                         String channel = rs.getString("channel");
                         String message = rs.getString("msg");
                         if (getSubscribedChannels().contains(channel) && message != null) {
-                            receive(channel, getCodec().decode(message));
+                            try {
+                                receive(channel, getCodec().decode(message));
+                            } catch (IOException e) {
+                                getLogger().log(2, "Cannot process received message from channel '" + channel + "'", e);
+                            }
                         }
                     }
                 }
             }
         } catch (SQLException e) {
-            log(2, e);
+            getLogger().log(2, "Cannot get messages from SQL database", e);
         }
         lock.readLock().unlock();
     }
@@ -182,7 +187,7 @@ public class HikariBroker extends Broker<HikariBroker> {
                 statement.execute();
             }
         } catch (SQLException e) {
-            log(2, e);
+            getLogger().log(2, "Cannot clean old messages from SQL database", e);
         }
         lock.readLock().unlock();
     }

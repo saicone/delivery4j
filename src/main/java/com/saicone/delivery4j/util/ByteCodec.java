@@ -9,7 +9,7 @@ public interface ByteCodec<T> {
     ByteCodec<String> BASE64 = new ByteCodec<>() {
         @Override
         public @NotNull String encode(byte[] src) {
-            return  Base64.getEncoder().encodeToString(src);
+            return Base64.getEncoder().encodeToString(src);
         }
 
         @Override

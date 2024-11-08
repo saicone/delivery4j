@@ -5,6 +5,7 @@ import org.jetbrains.annotations.NotNull;
 import redis.clients.jedis.*;
 import redis.clients.jedis.exceptions.JedisDataException;
 
+import java.io.IOException;
 import java.net.URI;
 
 /**
@@ -17,6 +18,8 @@ public class RedisBroker extends Broker<RedisBroker> {
     private final JedisPool pool;
     private final String password;
     private final Bridge bridge;
+
+    private Object aliveTask;
 
     /**
      * Create a RedisDelivery client with provided parameters.
@@ -97,7 +100,7 @@ public class RedisBroker extends Broker<RedisBroker> {
         setEnabled(true);
         // Jedis connection is a blocking operation.
         // So new thread is needed to not block the main thread
-        getExecutor().execute(this::alive);
+        aliveTask = getExecutor().execute(this::alive);
     }
 
     @Override
@@ -114,7 +117,10 @@ public class RedisBroker extends Broker<RedisBroker> {
         try {
             bridge.unsubscribe();
         } catch (Throwable ignored) { }
-        getExecutor().execute(this::alive);
+        if (aliveTask != null) {
+            getExecutor().cancel(aliveTask);
+        }
+        aliveTask = getExecutor().execute(this::alive);
     }
 
     @Override
@@ -122,11 +128,14 @@ public class RedisBroker extends Broker<RedisBroker> {
         try {
             bridge.unsubscribe();
         } catch (Throwable ignored) { }
-        getExecutor().execute(this::alive);
+        if (aliveTask != null) {
+            getExecutor().cancel(aliveTask);
+        }
+        aliveTask = getExecutor().execute(this::alive);
     }
 
     @Override
-    protected void onSend(@NotNull String channel, byte[] data) {
+    protected void onSend(@NotNull String channel, byte[] data) throws IOException {
         try (Jedis jedis = pool.getResource()) {
             final String message = getCodec().encode(data);
             try {
@@ -137,7 +146,7 @@ public class RedisBroker extends Broker<RedisBroker> {
                     jedis.auth(password);
                     jedis.publish(channel, message);
                 } else {
-                    throw e;
+                    throw new IOException(e);
                 }
             }
         }
@@ -184,7 +193,7 @@ public class RedisBroker extends Broker<RedisBroker> {
         while (isEnabled() && !Thread.interrupted() && pool != null && !pool.isClosed()) {
             try (Jedis jedis = pool.getResource()) {
                 if (reconnected) {
-                    log(3, "Redis connection is alive again");
+                    getLogger().log(3, "Redis connection is alive again");
                 }
                 // Subscribe channels and lock the thread
                 jedis.subscribe(bridge, getSubscribedChannels().toArray(new String[0]));
@@ -192,7 +201,7 @@ public class RedisBroker extends Broker<RedisBroker> {
                 // Thread was unlocked due error
                 if (isEnabled()) {
                     if (reconnected) {
-                        log(2, "Redis connection dropped, automatic reconnection in 8 seconds...\n" + t.getMessage());
+                        getLogger().log(2, "Redis connection dropped, automatic reconnection in 8 seconds...\n" + t.getMessage());
                     }
                     try {
                         bridge.unsubscribe();
@@ -223,18 +232,22 @@ public class RedisBroker extends Broker<RedisBroker> {
         @Override
         public void onMessage(String channel, String message) {
             if (channel != null && RedisBroker.this.getSubscribedChannels().contains(channel) && message != null) {
-                receive(channel, getCodec().decode(message));
+                try {
+                    receive(channel, getCodec().decode(message));
+                } catch (IOException e) {
+                    getLogger().log(2, "Cannot process received message from channel '" + channel + "'", e);
+                }
             }
         }
 
         @Override
         public void onSubscribe(String channel, int subscribedChannels) {
-            log(3, "Redis subscribed to channel '" + channel + "'");
+            getLogger().log(3, "Redis subscribed to channel '" + channel + "'");
         }
 
         @Override
         public void onUnsubscribe(String channel, int subscribedChannels) {
-            log(3, "Redis unsubscribed from channel '" + channel + "'");
+            getLogger().log(3, "Redis unsubscribed from channel '" + channel + "'");
         }
     }
 }

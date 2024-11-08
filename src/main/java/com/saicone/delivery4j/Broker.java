@@ -5,8 +5,11 @@ import com.saicone.delivery4j.util.DelayedExecutor;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.IOException;
 import java.util.*;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+import java.util.logging.Level;
 
 /**
  * Delivery client abstract class with common methods to transfer data and initialize any connection.
@@ -15,9 +18,10 @@ import java.util.function.BiConsumer;
  */
 public abstract class Broker<T extends Broker<T>> {
 
-    private BiConsumer<String, byte[]> consumer = (channel, data) -> {};
+    private ChannelConsumer<byte[]> consumer = (channel, data) -> {};
     private ByteCodec<String> codec = ByteCodec.BASE64;
     private DelayedExecutor<?> executor = DelayedExecutor.JAVA;
+    private Logger logger = Logger.JUL;
 
     /**
      * A Set of subscribed channels IDs.
@@ -62,7 +66,7 @@ public abstract class Broker<T extends Broker<T>> {
      * @param channel the channel ID.
      * @param data    the byte array data to send.
      */
-    protected void onSend(@NotNull String channel, byte[] data) {
+    protected void onSend(@NotNull String channel, byte[] data) throws IOException {
     }
 
     /**
@@ -71,14 +75,14 @@ public abstract class Broker<T extends Broker<T>> {
      * @param channel the channel ID.
      * @param data    the received byte array data.
      */
-    protected void onReceive(@NotNull String channel, byte[] data) {
+    protected void onReceive(@NotNull String channel, byte[] data) throws IOException {
     }
 
     @NotNull
     protected abstract T get();
 
     @NotNull
-    public BiConsumer<String, byte[]> getConsumer() {
+    public ChannelConsumer<byte[]> getConsumer() {
         return consumer;
     }
 
@@ -91,6 +95,11 @@ public abstract class Broker<T extends Broker<T>> {
     @SuppressWarnings("unchecked")
     public DelayedExecutor<Object> getExecutor() {
         return (DelayedExecutor<Object>) executor;
+    }
+
+    @NotNull
+    public Logger getLogger() {
+        return logger;
     }
 
     /**
@@ -114,7 +123,7 @@ public abstract class Broker<T extends Broker<T>> {
 
     @NotNull
     @Contract("_ -> this")
-    public T consumer(@NotNull BiConsumer<String, byte[]> consumer) {
+    public T consumer(@NotNull ChannelConsumer<byte[]> consumer) {
         this.consumer = consumer;
         return get();
     }
@@ -130,6 +139,13 @@ public abstract class Broker<T extends Broker<T>> {
     @Contract("_ -> this")
     public T executor(@NotNull DelayedExecutor<?> executor) {
         this.executor = executor;
+        return get();
+    }
+
+    @NotNull
+    @Contract("_ -> this")
+    public T setLogger(@NotNull Logger logger) {
+        this.logger = logger;
         return get();
     }
 
@@ -213,7 +229,7 @@ public abstract class Broker<T extends Broker<T>> {
      * @param channel the channel ID.
      * @param data    the data to send.
      */
-    public void send(@NotNull String channel, byte[] data) {
+    public void send(@NotNull String channel, byte[] data) throws IOException {
         onSend(channel, data);
     }
 
@@ -223,8 +239,68 @@ public abstract class Broker<T extends Broker<T>> {
      * @param channel the channel ID.
      * @param data    the data to receive.
      */
-    public void receive(@NotNull String channel, byte[] data) {
+    public void receive(@NotNull String channel, byte[] data) throws IOException {
         getConsumer().accept(channel, data);
         onReceive(channel, data);
+    }
+
+    public interface Logger {
+
+        Logger JUL = new Logger() {
+            private final boolean debug = "true".equals(System.getProperty("saicone.delivery4j.debug"));
+            private final java.util.logging.Logger delegate = java.util.logging.Logger.getLogger(Broker.class.getName());
+
+            private void getLevel(int level, @NotNull Consumer<Level> consumer) {
+                switch (level) {
+                    case 1:
+                        consumer.accept(Level.SEVERE);
+                        break;
+                    case 2:
+                        consumer.accept(Level.WARNING);
+                        break;
+                    case 3:
+                        consumer.accept(Level.INFO);
+                        break;
+                    case 4:
+                    default:
+                        if (debug) {
+                            consumer.accept(Level.INFO);
+                        }
+                        break;
+                }
+            }
+
+            @Override
+            public void log(int level, @NotNull String msg) {
+                getLevel(level, lvl -> delegate.log(lvl, msg));
+            }
+
+            @Override
+            public void log(int level, @NotNull String msg, @NotNull Throwable throwable) {
+                getLevel(level, lvl -> delegate.log(lvl, msg, throwable));
+            }
+
+            @Override
+            public void log(int level, @NotNull Supplier<String> msg) {
+                getLevel(level, lvl -> delegate.log(lvl, msg));
+            }
+
+            @Override
+            public void log(int level, @NotNull Supplier<String> msg, @NotNull Throwable throwable) {
+                getLevel(level, lvl -> delegate.log(lvl, throwable, msg));
+            }
+        };
+
+        void log(int level, @NotNull String msg);
+
+        void log(int level, @NotNull String msg, @NotNull Throwable throwable);
+
+        default void log(int level, @NotNull Supplier<String> msg) {
+            log(level, msg.get());
+        }
+
+        default void log(int level, @NotNull Supplier<String> msg, @NotNull Throwable throwable) {
+            log(level, msg.get(), throwable);
+        }
     }
 }

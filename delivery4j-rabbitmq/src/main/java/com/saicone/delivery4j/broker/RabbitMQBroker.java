@@ -122,12 +122,12 @@ public class RabbitMQBroker extends Broker<RabbitMQBroker> {
             }, __ -> {}); // Without canceled delivery
 
             if (reconnected) {
-                log(3, "RabbitMQ connection is alive again");
+                getLogger().log(3, "RabbitMQ connection is alive again");
                 reconnected = false;
             }
             setEnabled(true);
         } catch (Throwable t) {
-            log(1, t);
+            getLogger().log(1, "Cannot start RabbitMQ connection", t);
             return;
         }
 
@@ -153,7 +153,7 @@ public class RabbitMQBroker extends Broker<RabbitMQBroker> {
             try {
                 cChannel.queueBind(queue, exchange, channel);
             } catch (IOException e) {
-                log(1, e);
+                getLogger().log(1, "Cannot subscribe to channel '" + channel + "'", e);
             }
         }
     }
@@ -164,13 +164,13 @@ public class RabbitMQBroker extends Broker<RabbitMQBroker> {
             try {
                 cChannel.queueUnbind(queue, exchange, channel);
             } catch (IOException e) {
-                log(1, e);
+                getLogger().log(1, "Cannot unsubscribe from channel '" + channel + "'", e);
             }
         }
     }
 
     @Override
-    protected void onSend(@NotNull String channel, byte[] data) {
+    protected void onSend(@NotNull String channel, byte[] data) throws IOException {
         if (cChannel == null) {
             return;
         }
@@ -179,7 +179,7 @@ public class RabbitMQBroker extends Broker<RabbitMQBroker> {
             // Publish to exchange and routing key without any special properties
             cChannel.basicPublish(exchange, channel, new AMQP.BasicProperties.Builder().build(), data);
         } catch (Throwable t) {
-            log(2, t);
+            throw new IOException(t);
         }
     }
 
@@ -209,7 +209,7 @@ public class RabbitMQBroker extends Broker<RabbitMQBroker> {
             reconnected = true;
             setEnabled(false);
             while (true) {
-                log(2, "RabbitMQ connection dropped, automatic reconnection every 8 seconds...");
+                getLogger().log(2, "RabbitMQ connection dropped, automatic reconnection every 8 seconds...");
                 onStart();
                 if (!isEnabled() && !Thread.interrupted()) {
                     try {
@@ -232,7 +232,7 @@ public class RabbitMQBroker extends Broker<RabbitMQBroker> {
                 }
             }
         } catch (Throwable t) {
-            log(2, t);
+            getLogger().log(2, "Cannot close RabbitMQ connection", t);
         }
     }
 }
