@@ -23,11 +23,7 @@ public class MessageChannel {
 
     private final String name;
     private ChannelConsumer<String[]> consumer;
-
-    private Map<Integer, Long> cache;
-    private long cacheTime = 10L;
-    private TimeUnit cacheUnit = TimeUnit.SECONDS;
-
+    private Cache cache;
     private Encryptor encryptor;
 
     public MessageChannel(@NotNull String name) {
@@ -47,6 +43,11 @@ public class MessageChannel {
     @Nullable
     public ChannelConsumer<String[]> getConsumer() {
         return consumer;
+    }
+
+    @Nullable
+    public Cache getCache() {
+        return cache;
     }
 
     @Nullable
@@ -82,17 +83,20 @@ public class MessageChannel {
         if (enable) {
             return cache(10, TimeUnit.SECONDS);
         } else {
-            this.cache = null;
-            return this;
+            return cache(null);
         }
     }
 
     @NotNull
     @Contract("_, _ -> this")
     public MessageChannel cache(long time, @NotNull TimeUnit unit) {
-        this.cache = new HashMap<>();
-        this.cacheTime = time;
-        this.cacheUnit = unit;
+        return cache(Cache.of(time, unit));
+    }
+
+    @NotNull
+    @Contract("_ -> this")
+    public MessageChannel cache(@Nullable Cache cache) {
+        this.cache = cache;
         return this;
     }
 
@@ -106,7 +110,7 @@ public class MessageChannel {
     public byte[] encode(@Nullable Object... lines) throws IOException {
         try (ByteArrayOutputStream arrayOut = new ByteArrayOutputStream(); DataOutputStream out = new DataOutputStream(arrayOut)) {
             if (this.cache != null) {
-                out.writeInt(generateId());
+                out.writeInt(this.cache.generate());
             }
             out.writeInt(lines.length);
             out.writeInt(lines.length);
@@ -132,7 +136,7 @@ public class MessageChannel {
     @Nullable
     public String[] decode(byte[] src) throws IOException {
         try (DataInputStream in = new DataInputStream(new ByteArrayInputStream(src))) {
-            if (this.cache != null && this.cache.containsKey(in.readInt())) {
+            if (this.cache != null && this.cache.contains(in.readInt())) {
                 return null;
             }
             final String[] lines = new String[in.readInt()];
@@ -172,20 +176,46 @@ public class MessageChannel {
         this.cache.clear();
     }
 
-    /**
-     * Create int-based id to detect duplicated messages.
-     *
-     * @return a random number.
-     */
-    protected int generateId() {
-        // 0-10000
-        final int id = ThreadLocalRandom.current().nextInt(0, 999999 + 1);
-        final long currentTime = System.currentTimeMillis();
-        if (id < 1999) { // 20%
-            final long time = currentTime - this.cacheUnit.toMillis(this.cacheTime);
-            this.cache.entrySet().removeIf(entry -> entry.getValue() <= time);
+    public static abstract class Cache {
+
+        @NotNull
+        public static Cache of(long time, @NotNull TimeUnit unit) {
+            return new Cache() {
+                private final Map<Integer, Long> cache = new HashMap<>();
+                private final long millis = unit.toMillis(time);
+
+                @Override
+                protected void save(int id) {
+                    final long currentTime = System.currentTimeMillis();
+                    if (id < 1999) { // 20%
+                        final long expiryTime = currentTime - this.millis;
+                        this.cache.entrySet().removeIf(entry -> entry.getValue() <= expiryTime);
+                    }
+                    this.cache.put(id, currentTime);
+                }
+
+                @Override
+                public boolean contains(int id) {
+                    return this.cache.containsKey(id);
+                }
+
+                @Override
+                public void clear() {
+                    this.cache.clear();
+                }
+            };
         }
-        this.cache.put(id, currentTime);
-        return id;
+
+        protected abstract void save(int id);
+
+        public abstract boolean contains(int id);
+
+        public int generate() {
+            final int id = ThreadLocalRandom.current().nextInt(0, 999999 + 1);
+            save(id);
+            return id;
+        }
+
+        public abstract void clear();
     }
 }

@@ -166,11 +166,11 @@ public abstract class AbstractMessenger {
         }, this.executor);
     }
 
-    public void accept(@NotNull String channel, byte[] src) throws IOException {
+    public boolean accept(@NotNull String channel, byte[] src) throws IOException {
         final MessageChannel messageChannel = this.channels.get(channel);
         if (messageChannel == null) {
             throw new IllegalStateException("The messaging chanel '" + channel + "' doesn't exist");
         }
-        messageChannel.accept(src);
+        return messageChannel.accept(src);
     }
 }
