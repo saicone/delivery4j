@@ -21,7 +21,7 @@ public abstract class Broker<T extends Broker<T>> {
     private ChannelConsumer<byte[]> consumer = (channel, data) -> {};
     private ByteCodec<String> codec = ByteCodec.BASE64;
     private DelayedExecutor<?> executor = DelayedExecutor.JAVA;
-    private Logger logger = Logger.JUL;
+    private Logger logger = Logger.of(this.getClass());
 
     /**
      * A Set of subscribed channels IDs.
@@ -246,50 +246,53 @@ public abstract class Broker<T extends Broker<T>> {
 
     public interface Logger {
 
-        Logger JUL = new Logger() {
-            private final boolean debug = "true".equals(System.getProperty("saicone.delivery4j.debug"));
-            private final java.util.logging.Logger delegate = java.util.logging.Logger.getLogger(Broker.class.getName());
+        @NotNull
+        static Logger of(@NotNull Class<?> clazz) {
+            return new Logger() {
+                private final boolean debug = "true".equals(System.getProperty("saicone.delivery4j.debug"));
+                private final java.util.logging.Logger delegate = java.util.logging.Logger.getLogger(clazz.getName());
 
-            private void getLevel(int level, @NotNull Consumer<Level> consumer) {
-                switch (level) {
-                    case 1:
-                        consumer.accept(Level.SEVERE);
-                        break;
-                    case 2:
-                        consumer.accept(Level.WARNING);
-                        break;
-                    case 3:
-                        consumer.accept(Level.INFO);
-                        break;
-                    case 4:
-                    default:
-                        if (debug) {
+                private void log(int level, @NotNull Consumer<Level> consumer) {
+                    switch (level) {
+                        case 1:
+                            consumer.accept(Level.SEVERE);
+                            break;
+                        case 2:
+                            consumer.accept(Level.WARNING);
+                            break;
+                        case 3:
                             consumer.accept(Level.INFO);
-                        }
-                        break;
+                            break;
+                        case 4:
+                        default:
+                            if (debug) {
+                                consumer.accept(Level.INFO);
+                            }
+                            break;
+                    }
                 }
-            }
 
-            @Override
-            public void log(int level, @NotNull String msg) {
-                getLevel(level, lvl -> delegate.log(lvl, msg));
-            }
+                @Override
+                public void log(int level, @NotNull String msg) {
+                    log(level, lvl -> delegate.log(lvl, msg));
+                }
 
-            @Override
-            public void log(int level, @NotNull String msg, @NotNull Throwable throwable) {
-                getLevel(level, lvl -> delegate.log(lvl, msg, throwable));
-            }
+                @Override
+                public void log(int level, @NotNull String msg, @NotNull Throwable throwable) {
+                    log(level, lvl -> delegate.log(lvl, msg, throwable));
+                }
 
-            @Override
-            public void log(int level, @NotNull Supplier<String> msg) {
-                getLevel(level, lvl -> delegate.log(lvl, msg));
-            }
+                @Override
+                public void log(int level, @NotNull Supplier<String> msg) {
+                    log(level, lvl -> delegate.log(lvl, msg));
+                }
 
-            @Override
-            public void log(int level, @NotNull Supplier<String> msg, @NotNull Throwable throwable) {
-                getLevel(level, lvl -> delegate.log(lvl, throwable, msg));
-            }
-        };
+                @Override
+                public void log(int level, @NotNull Supplier<String> msg, @NotNull Throwable throwable) {
+                    log(level, lvl -> delegate.log(lvl, throwable, msg));
+                }
+            };
+        }
 
         void log(int level, @NotNull String msg);
 
