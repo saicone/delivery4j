@@ -89,8 +89,8 @@ public class MessageChannel {
 
     @NotNull
     @Contract("_, _ -> this")
-    public MessageChannel cache(long time, @NotNull TimeUnit unit) {
-        return cache(Cache.of(time, unit));
+    public MessageChannel cache(long duration, @NotNull TimeUnit unit) {
+        return cache(Cache.of(duration, unit));
     }
 
     @NotNull
@@ -179,17 +179,33 @@ public class MessageChannel {
     public static abstract class Cache {
 
         @NotNull
-        public static Cache of(long time, @NotNull TimeUnit unit) {
+        public static Cache of(long duration, @NotNull TimeUnit unit) {
+            try {
+                Class.forName("com.github.benmanes.caffeine.cache.Caffeine");
+                return Class.forName("com.saicone.delivery4j.cache.CaffeineCache")
+                        .asSubclass(Cache.class)
+                        .getDeclaredConstructor(long.class, TimeUnit.class)
+                        .newInstance(duration, unit);
+            } catch (Throwable ignored) { }
+
+            try {
+                Class.forName("com.google.common.cache.CacheBuilder");
+                return Class.forName("com.saicone.delivery4j.cache.GuavaCache")
+                        .asSubclass(Cache.class)
+                        .getDeclaredConstructor(long.class, TimeUnit.class)
+                        .newInstance(duration, unit);
+            } catch (Throwable ignored) { }
+
             return new Cache() {
                 private final Map<Integer, Long> cache = new HashMap<>();
-                private final long millis = unit.toMillis(time);
+                private final long millis = unit.toMillis(duration);
 
                 @Override
                 protected void save(int id) {
                     final long currentTime = System.currentTimeMillis();
                     if (id < 1999) { // 20%
-                        final long expiryTime = currentTime - this.millis;
-                        this.cache.entrySet().removeIf(entry -> entry.getValue() <= expiryTime);
+                        final long time = currentTime - this.millis;
+                        this.cache.entrySet().removeIf(entry -> entry.getValue() <= time);
                     }
                     this.cache.put(id, currentTime);
                 }

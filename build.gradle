@@ -29,6 +29,17 @@ allprojects {
         withSourcesJar()
         withJavadocJar()
     }
+
+    publishing {
+        publications {
+            maven(MavenPublication) {
+                groupId project.group
+                artifactId project.name
+                version project.version
+                from components.java
+            }
+        }
+    }
 }
 
 subprojects {
@@ -37,22 +48,15 @@ subprojects {
     }
 }
 
-publishing {
-    publications {
-        maven(MavenPublication) {
-            groupId project.group
-            artifactId project.name
-            version project.version
-            from components.java
-        }
-    }
-}
-
 def javadocProjects= [
         ':',
         ':delivery4j-rabbitmq',
         ':delivery4j-redis',
-        ':delivery4j-hikari'
+        ':delivery4j-hikari',
+        ':extension:extension-caffeine',
+        ':extension:extension-guava',
+        ':extension:extension-log4j',
+        ':extension:extension-slf4j'
 ]
 
 tasks.register('allJavadoc', Javadoc) {
@@ -61,9 +65,9 @@ tasks.register('allJavadoc', Javadoc) {
     options {
         links 'https://docs.oracle.com/en/java/javase/11/docs/api/'
         links 'https://rabbitmq.github.io/rabbitmq-java-client/api/current/'
-        links 'https://javadoc.io/doc/redis.clients/jedis/5.1.0/'
+        links 'https://javadoc.io/doc/redis.clients/jedis/latest/'
         links 'https://javadoc.io/doc/com.zaxxer/HikariCP/latest/'
         links 'https://javadoc.io/doc/org.jetbrains/annotations/latest/'
     }
-    destinationDir = file(project.buildDir.path + '/docs/all-javadoc')
+    destinationDir = file(project.layout.buildDirectory.dir('docs/all-javadoc'))
 }

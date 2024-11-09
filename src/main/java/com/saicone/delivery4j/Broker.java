@@ -246,11 +246,28 @@ public abstract class Broker<T extends Broker<T>> {
 
     public interface Logger {
 
+        boolean DEBUG = "true".equals(System.getProperty("saicone.delivery4j.debug"));
+
         @NotNull
         static Logger of(@NotNull Class<?> clazz) {
+            try {
+                Class.forName("org.apache.logging.log4j.Logger");
+                return Class.forName("com.saicone.delivery4j.log.Log4jLogger")
+                        .asSubclass(Logger.class)
+                        .getDeclaredConstructor(Class.class)
+                        .newInstance(clazz);
+            } catch (Throwable ignored) { }
+
+            try {
+                Class.forName("org.slf4j.Logger");
+                return Class.forName("com.saicone.delivery4j.log.Slf4jLogger")
+                        .asSubclass(Logger.class)
+                        .getDeclaredConstructor(Class.class)
+                        .newInstance(clazz);
+            } catch (Throwable ignored) { }
+
             return new Logger() {
-                private final boolean debug = "true".equals(System.getProperty("saicone.delivery4j.debug"));
-                private final java.util.logging.Logger delegate = java.util.logging.Logger.getLogger(clazz.getName());
+                private final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(clazz.getName());
 
                 private void log(int level, @NotNull Consumer<Level> consumer) {
                     switch (level) {
@@ -265,7 +282,7 @@ public abstract class Broker<T extends Broker<T>> {
                             break;
                         case 4:
                         default:
-                            if (debug) {
+                            if (DEBUG) {
                                 consumer.accept(Level.INFO);
                             }
                             break;
@@ -274,22 +291,22 @@ public abstract class Broker<T extends Broker<T>> {
 
                 @Override
                 public void log(int level, @NotNull String msg) {
-                    log(level, lvl -> delegate.log(lvl, msg));
+                    log(level, lvl -> this.logger.log(lvl, msg));
                 }
 
                 @Override
                 public void log(int level, @NotNull String msg, @NotNull Throwable throwable) {
-                    log(level, lvl -> delegate.log(lvl, msg, throwable));
+                    log(level, lvl -> this.logger.log(lvl, msg, throwable));
                 }
 
                 @Override
                 public void log(int level, @NotNull Supplier<String> msg) {
-                    log(level, lvl -> delegate.log(lvl, msg));
+                    log(level, lvl -> this.logger.log(lvl, msg));
                 }
 
                 @Override
                 public void log(int level, @NotNull Supplier<String> msg, @NotNull Throwable throwable) {
-                    log(level, lvl -> delegate.log(lvl, throwable, msg));
+                    log(level, lvl -> this.logger.log(lvl, throwable, msg));
                 }
             };
         }

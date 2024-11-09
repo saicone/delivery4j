@@ -1,7 +1,16 @@
 rootProject.name = 'delivery4j'
 
+// Broker types
 include(
+	'delivery4j-hikari',
 	'delivery4j-rabbitmq',
-	'delivery4j-redis',
-	'delivery4j-hikari'
-	)
+	'delivery4j-redis'
+)
+
+// Extensions
+include(
+	'extension:extension-caffeine',
+	'extension:extension-guava',
+	'extension:extension-log4j',
+	'extension:extension-slf4j'
+)
