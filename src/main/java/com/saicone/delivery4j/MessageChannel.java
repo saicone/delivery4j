@@ -113,7 +113,6 @@ public class MessageChannel {
                 out.writeInt(this.cache.generate());
             }
             out.writeInt(lines.length);
-            out.writeInt(lines.length);
             if (this.encryptor == null) {
                 for (Object message : lines) {
                     out.writeUTF(Objects.toString(message));
