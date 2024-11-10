@@ -10,8 +10,15 @@ import java.sql.SQLException;
 
 public class HikariBroker extends SqlBroker {
 
-    public HikariBroker(@NotNull String url, @NotNull String user, @NotNull String password) {
-        this(hikari(url, user, password));
+    private final HikariDataSource hikari;
+
+    @NotNull
+    public static HikariBroker of(@NotNull String url, @NotNull String user, @NotNull String password) {
+        final HikariConfig config = new HikariConfig();
+        config.setJdbcUrl(url);
+        config.setUsername(user);
+        config.setPassword(password);
+        return new HikariBroker(new HikariDataSource(config));
     }
 
     public HikariBroker(@NotNull HikariDataSource hikari) {
@@ -36,14 +43,11 @@ public class HikariBroker extends SqlBroker {
                 hikari.close();
             }
         });
+        this.hikari = hikari;
     }
 
     @NotNull
-    private static HikariDataSource hikari(@NotNull String url, @NotNull String user, @NotNull String password) {
-        final HikariConfig config = new HikariConfig();
-        config.setJdbcUrl(url);
-        config.setUsername(user);
-        config.setPassword(password);
-        return new HikariDataSource(config);
+    public HikariDataSource getHikari() {
+        return hikari;
     }
 }

@@ -30,8 +30,9 @@ public class SqlBroker extends Broker {
     private Object getTask = null;
     private Object cleanTask = null;
 
-    public SqlBroker(@NotNull String url, @NotNull String user, @NotNull String password) throws SQLException {
-        this(DataSource.java(url, user, password));
+    @NotNull
+    public static SqlBroker of(@NotNull String url, @NotNull String user, @NotNull String password) throws SQLException {
+        return new SqlBroker(DataSource.java(url, user, password));
     }
 
     public SqlBroker(@NotNull Connection con) {
