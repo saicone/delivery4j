@@ -31,17 +31,19 @@ public interface Encryptor {
 
     @NotNull
     static Encryptor of(@NotNull String transformation, @NotNull SecretKey key, @NotNull Charset charset) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
-        final Cipher cipher = Cipher.getInstance(transformation);
-        cipher.init(Cipher.ENCRYPT_MODE, key);
+        final Cipher encrypt = Cipher.getInstance(transformation);
+        encrypt.init(Cipher.ENCRYPT_MODE, key);
+        final Cipher decrypt = Cipher.getInstance(transformation);
+        decrypt.init(Cipher.DECRYPT_MODE, key);
         return new Encryptor() {
             @Override
             public byte[] encrypt(@NotNull String input) throws IllegalBlockSizeException, BadPaddingException {
-                return cipher.doFinal(input.getBytes(charset));
+                return encrypt.doFinal(input.getBytes(charset));
             }
 
             @Override
             public @NotNull String decrypt(byte[] input) throws IllegalBlockSizeException, BadPaddingException {
-                return new String(cipher.doFinal(input), charset);
+                return new String(decrypt.doFinal(input), charset);
             }
         };
     }
