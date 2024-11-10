@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit;
 public class TestMessenger extends AbstractMessenger implements DelayedExecutor<Void> {
 
     public TestMessenger() {
-        setExecutor(Runnable::run);
+        setExecutor(this.asExecutor());
     }
 
     @Override

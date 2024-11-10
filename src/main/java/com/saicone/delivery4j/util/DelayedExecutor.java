@@ -2,6 +2,7 @@ package com.saicone.delivery4j.util;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 public interface DelayedExecutor<T> {
@@ -69,4 +70,9 @@ public interface DelayedExecutor<T> {
     T execute(@NotNull Runnable command, long delay, long period, @NotNull TimeUnit unit);
 
     void cancel(@NotNull T t);
+
+    @NotNull
+    default Executor asExecutor() {
+        return this::execute;
+    }
 }
