@@ -6,7 +6,11 @@ import com.zaxxer.hikari.HikariDataSource;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -57,8 +61,8 @@ public class HikariBroker extends Broker<HikariBroker> {
 
     @Override
     protected void onStart() {
-        try (Connection connection = hikari.getConnection()) {
-            String createTable = "CREATE TABLE IF NOT EXISTS `" + tablePrefix + "messenger` (`id` INT AUTO_INCREMENT NOT NULL, `time` TIMESTAMP NOT NULL, `channel` VARCHAR(255) NOT NULL, `msg` TEXT NOT NULL, PRIMARY KEY (`id`)) DEFAULT CHARSET = utf8mb4";
+        try (Connection connection = this.hikari.getConnection()) {
+            String createTable = "CREATE TABLE IF NOT EXISTS `" + this.tablePrefix + "messenger` (`id` INT AUTO_INCREMENT NOT NULL, `time` TIMESTAMP NOT NULL, `channel` VARCHAR(255) NOT NULL, `msg` TEXT NOT NULL, PRIMARY KEY (`id`)) DEFAULT CHARSET = utf8mb4";
             // Taken from LuckPerms
             try (Statement statement = connection.createStatement()) {
                 try {
@@ -72,7 +76,7 @@ public class HikariBroker extends Broker<HikariBroker> {
                 }
             }
 
-            try (PreparedStatement statement = connection.prepareStatement("SELECT MAX(`id`) as `latest` FROM `" + tablePrefix + "messenger`")) {
+            try (PreparedStatement statement = connection.prepareStatement("SELECT MAX(`id`) as `latest` FROM `" + this.tablePrefix + "messenger`")) {
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
                         currentID = resultSet.getLong("latest");
@@ -80,11 +84,11 @@ public class HikariBroker extends Broker<HikariBroker> {
                 }
             }
             setEnabled(true);
-            if (getTask == null) {
-                getTask = getExecutor().execute(this::getMessages, 10, 10, TimeUnit.SECONDS);
+            if (this.getTask == null) {
+                this.getTask = getExecutor().execute(this::getMessages, 10, 10, TimeUnit.SECONDS);
             }
-            if (cleanTask == null) {
-                cleanTask = getExecutor().execute(this::cleanMessages, 30, 30, TimeUnit.SECONDS);
+            if (this.cleanTask == null) {
+                this.cleanTask = getExecutor().execute(this::cleanMessages, 30, 30, TimeUnit.SECONDS);
             }
         } catch (SQLException e) {
             getLogger().log(1, "Cannot start hikari connection", e);
@@ -93,14 +97,14 @@ public class HikariBroker extends Broker<HikariBroker> {
 
     @Override
     protected void onClose() {
-        hikari.close();
-        if (getTask != null) {
-            getExecutor().cancel(getTask);
-            getTask = null;
+        this.hikari.close();
+        if (this.getTask != null) {
+            getExecutor().cancel(this.getTask);
+            this.getTask = null;
         }
-        if (cleanTask != null) {
-            getExecutor().cancel(cleanTask);
-            cleanTask = null;
+        if (this.cleanTask != null) {
+            getExecutor().cancel(this.cleanTask);
+            this.cleanTask = null;
         }
     }
 
@@ -109,10 +113,10 @@ public class HikariBroker extends Broker<HikariBroker> {
         if (!isEnabled()) {
             return;
         }
-        lock.readLock().lock();
+        this.lock.readLock().lock();
 
-        try (Connection connection = hikari.getConnection()) {
-            try (PreparedStatement statement = connection.prepareStatement("INSERT INTO `" + tablePrefix + "messenger` (`time`, `channel`, `msg`) VALUES(NOW(), ?, ?)")) {
+        try (Connection connection = this.hikari.getConnection()) {
+            try (PreparedStatement statement = connection.prepareStatement("INSERT INTO `" + this.tablePrefix + "messenger` (`time`, `channel`, `msg`) VALUES(NOW(), ?, ?)")) {
                 statement.setString(1, channel);
                 statement.setString(2, getCodec().encode(data));
                 statement.execute();
@@ -120,7 +124,7 @@ public class HikariBroker extends Broker<HikariBroker> {
         } catch (SQLException e) {
             throw new IOException(e);
         }
-        lock.readLock().unlock();
+        this.lock.readLock().unlock();
     }
 
     @Override
@@ -142,18 +146,18 @@ public class HikariBroker extends Broker<HikariBroker> {
      * Get all unread messages from database.
      */
     public void getMessages() {
-        if (!isEnabled() || !hikari.isRunning()) {
+        if (!isEnabled() || !this.hikari.isRunning()) {
             return;
         }
-        lock.readLock().lock();
+        this.lock.readLock().lock();
 
-        try (Connection connection = hikari.getConnection()) {
-            try (PreparedStatement statement = connection.prepareStatement("SELECT `id`, `channel`, `msg` FROM `" + tablePrefix + "messenger` WHERE `id` > ? AND (NOW() - `time` < 30)")) {
-                statement.setLong(1, currentID);
+        try (Connection connection = this.hikari.getConnection()) {
+            try (PreparedStatement statement = connection.prepareStatement("SELECT `id`, `channel`, `msg` FROM `" + this.tablePrefix + "messenger` WHERE `id` > ? AND (NOW() - `time` < 30)")) {
+                statement.setLong(1, this.currentID);
                 try (ResultSet rs = statement.executeQuery()) {
                     while (rs.next()) {
                         long id = rs.getLong("id");
-                        currentID = Math.max(currentID, id);
+                        this.currentID = Math.max(this.currentID, id);
 
                         String channel = rs.getString("channel");
                         String message = rs.getString("msg");
@@ -170,25 +174,25 @@ public class HikariBroker extends Broker<HikariBroker> {
         } catch (SQLException e) {
             getLogger().log(2, "Cannot get messages from SQL database", e);
         }
-        lock.readLock().unlock();
+        this.lock.readLock().unlock();
     }
 
     /**
      * Clean old messages from database.
      */
     public void cleanMessages() {
-        if (!isEnabled() || !hikari.isRunning()) {
+        if (!isEnabled() || !this.hikari.isRunning()) {
             return;
         }
-        lock.readLock().lock();
+        this.lock.readLock().lock();
 
-        try (Connection connection = hikari.getConnection()) {
-            try (PreparedStatement statement = connection.prepareStatement("DELETE FROM `" + tablePrefix + "messenger` WHERE (NOW() - `time` > 60)")) {
+        try (Connection connection = this.hikari.getConnection()) {
+            try (PreparedStatement statement = connection.prepareStatement("DELETE FROM `" + this.tablePrefix + "messenger` WHERE (NOW() - `time` > 60)")) {
                 statement.execute();
             }
         } catch (SQLException e) {
             getLogger().log(2, "Cannot clean old messages from SQL database", e);
         }
-        lock.readLock().unlock();
+        this.lock.readLock().unlock();
     }
 }

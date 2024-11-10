@@ -1,6 +1,10 @@
 package com.saicone.delivery4j.broker;
 
-import com.rabbitmq.client.*;
+import com.rabbitmq.client.AMQP;
+import com.rabbitmq.client.BuiltinExchangeType;
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ConnectionFactory;
 import com.saicone.delivery4j.Broker;
 import org.jetbrains.annotations.NotNull;
 
@@ -100,30 +104,30 @@ public class RabbitMQBroker extends Broker<RabbitMQBroker> {
         // Random stuff, let's go!
         try {
             // First, create a channel
-            cChannel = connection.createChannel();
+            this.cChannel = this.connection.createChannel();
 
             // Second!
             // Create auto-delete queue
-            this.queue = cChannel.queueDeclare("", false, true, true, null).getQueue();
+            this.queue = this.cChannel.queueDeclare("", false, true, true, null).getQueue();
             // With auto-delete pre-channel (exchange in RabbitMQ)
-            cChannel.exchangeDeclare(exchange, BuiltinExchangeType.TOPIC, false, true, null);
+            this.cChannel.exchangeDeclare(this.exchange, BuiltinExchangeType.TOPIC, false, true, null);
             // And subscribed channels (routing keys in RabbitMQ)
             for (String channel : getSubscribedChannels()) {
-                cChannel.queueBind(this.queue, exchange, channel);
+                this.cChannel.queueBind(this.queue, this.exchange, channel);
             }
 
             // Third, and most important
             // Register callback for message delivery
-            cChannel.basicConsume(this.queue, true, (consumerTag, message) -> {
+            this.cChannel.basicConsume(this.queue, true, (consumerTag, message) -> {
                 final String channel = message.getEnvelope().getRoutingKey();
                 if (getSubscribedChannels().contains(channel)) {
                     receive(channel, message.getBody());
                 }
             }, __ -> {}); // Without canceled delivery
 
-            if (reconnected) {
+            if (this.reconnected) {
                 getLogger().log(3, "RabbitMQ connection is alive again");
-                reconnected = false;
+                this.reconnected = false;
             }
             setEnabled(true);
         } catch (Throwable t) {
@@ -132,18 +136,18 @@ public class RabbitMQBroker extends Broker<RabbitMQBroker> {
         }
 
         // Maintain the connection alive
-        if (aliveTask == null) {
-            aliveTask = getExecutor().execute(this::alive, 30, 30, TimeUnit.SECONDS);
+        if (this.aliveTask == null) {
+            this.aliveTask = getExecutor().execute(this::alive, 30, 30, TimeUnit.SECONDS);
         }
     }
 
     @Override
     protected void onClose() {
-        close(cChannel, connection);
-        cChannel = null;
-        if (aliveTask != null) {
-            getExecutor().cancel(aliveTask);
-            aliveTask = null;
+        close(this.cChannel, this.connection);
+        this.cChannel = null;
+        if (this.aliveTask != null) {
+            getExecutor().cancel(this.aliveTask);
+            this.aliveTask = null;
         }
     }
 
@@ -151,7 +155,7 @@ public class RabbitMQBroker extends Broker<RabbitMQBroker> {
     protected void onSubscribe(@NotNull String... channels) {
         for (String channel : channels) {
             try {
-                cChannel.queueBind(queue, exchange, channel);
+                this.cChannel.queueBind(this.queue, this.exchange, channel);
             } catch (IOException e) {
                 getLogger().log(1, "Cannot subscribe to channel '" + channel + "'", e);
             }
@@ -162,7 +166,7 @@ public class RabbitMQBroker extends Broker<RabbitMQBroker> {
     protected void onUnsubscribe(@NotNull String... channels) {
         for (String channel : channels) {
             try {
-                cChannel.queueUnbind(queue, exchange, channel);
+                this.cChannel.queueUnbind(this.queue, this.exchange, channel);
             } catch (IOException e) {
                 getLogger().log(1, "Cannot unsubscribe from channel '" + channel + "'", e);
             }
@@ -171,13 +175,13 @@ public class RabbitMQBroker extends Broker<RabbitMQBroker> {
 
     @Override
     protected void onSend(@NotNull String channel, byte[] data) throws IOException {
-        if (cChannel == null) {
+        if (this.cChannel == null) {
             return;
         }
 
         try {
             // Publish to exchange and routing key without any special properties
-            cChannel.basicPublish(exchange, channel, new AMQP.BasicProperties.Builder().build(), data);
+            this.cChannel.basicPublish(this.exchange, channel, new AMQP.BasicProperties.Builder().build(), data);
         } catch (Throwable t) {
             throw new IOException(t);
         }
@@ -203,10 +207,10 @@ public class RabbitMQBroker extends Broker<RabbitMQBroker> {
         if (!isEnabled()) {
             return;
         }
-        if (connection == null || !connection.isOpen() || cChannel == null || !cChannel.isOpen()) {
-            close(cChannel, connection);
-            cChannel = null;
-            reconnected = true;
+        if (this.connection == null || !this.connection.isOpen() || this.cChannel == null || !this.cChannel.isOpen()) {
+            close(this.cChannel, this.connection);
+            this.cChannel = null;
+            this.reconnected = true;
             setEnabled(false);
             while (true) {
                 getLogger().log(2, "RabbitMQ connection dropped, automatic reconnection every 8 seconds...");

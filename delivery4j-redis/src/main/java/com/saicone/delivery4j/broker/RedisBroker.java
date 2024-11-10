@@ -2,7 +2,11 @@ package com.saicone.delivery4j.broker;
 
 import com.saicone.delivery4j.Broker;
 import org.jetbrains.annotations.NotNull;
-import redis.clients.jedis.*;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
+import redis.clients.jedis.JedisPubSub;
+import redis.clients.jedis.Protocol;
 import redis.clients.jedis.exceptions.JedisDataException;
 
 import java.io.IOException;
@@ -100,50 +104,50 @@ public class RedisBroker extends Broker<RedisBroker> {
         setEnabled(true);
         // Jedis connection is a blocking operation.
         // So new thread is needed to not block the main thread
-        aliveTask = getExecutor().execute(this::alive);
+        this.aliveTask = getExecutor().execute(this::alive);
     }
 
     @Override
     protected void onClose() {
         setEnabled(false);
         try {
-            bridge.unsubscribe();
+            this.bridge.unsubscribe();
         } catch (Throwable ignored) { }
-        pool.destroy();
+        this.pool.destroy();
     }
 
     @Override
     protected void onSubscribe(@NotNull String... channels) {
         try {
-            bridge.unsubscribe();
+            this.bridge.unsubscribe();
         } catch (Throwable ignored) { }
-        if (aliveTask != null) {
-            getExecutor().cancel(aliveTask);
+        if (this.aliveTask != null) {
+            getExecutor().cancel(this.aliveTask);
         }
-        aliveTask = getExecutor().execute(this::alive);
+        this.aliveTask = getExecutor().execute(this::alive);
     }
 
     @Override
     protected void onUnsubscribe(@NotNull String... channels) {
         try {
-            bridge.unsubscribe();
+            this.bridge.unsubscribe();
         } catch (Throwable ignored) { }
-        if (aliveTask != null) {
-            getExecutor().cancel(aliveTask);
+        if (this.aliveTask != null) {
+            getExecutor().cancel(this.aliveTask);
         }
-        aliveTask = getExecutor().execute(this::alive);
+        this.aliveTask = getExecutor().execute(this::alive);
     }
 
     @Override
     protected void onSend(@NotNull String channel, byte[] data) throws IOException {
-        try (Jedis jedis = pool.getResource()) {
+        try (Jedis jedis = this.pool.getResource()) {
             final String message = getCodec().encode(data);
             try {
                 jedis.publish(channel, message);
             } catch (JedisDataException e) {
                 // Fix Java +16 error
                 if (e.getMessage().contains("NOAUTH")) {
-                    jedis.auth(password);
+                    jedis.auth(this.password);
                     jedis.publish(channel, message);
                 } else {
                     throw new IOException(e);
@@ -190,13 +194,13 @@ public class RedisBroker extends Broker<RedisBroker> {
     @SuppressWarnings("all")
     private void alive() {
         boolean reconnected = false;
-        while (isEnabled() && !Thread.interrupted() && pool != null && !pool.isClosed()) {
-            try (Jedis jedis = pool.getResource()) {
+        while (isEnabled() && !Thread.interrupted() && this.pool != null && !this.pool.isClosed()) {
+            try (Jedis jedis = this.pool.getResource()) {
                 if (reconnected) {
                     getLogger().log(3, "Redis connection is alive again");
                 }
                 // Subscribe channels and lock the thread
-                jedis.subscribe(bridge, getSubscribedChannels().toArray(new String[0]));
+                jedis.subscribe(this.bridge, getSubscribedChannels().toArray(new String[0]));
             } catch (Throwable t) {
                 // Thread was unlocked due error
                 if (isEnabled()) {
@@ -204,7 +208,7 @@ public class RedisBroker extends Broker<RedisBroker> {
                         getLogger().log(2, "Redis connection dropped, automatic reconnection in 8 seconds...\n" + t.getMessage());
                     }
                     try {
-                        bridge.unsubscribe();
+                        this.bridge.unsubscribe();
                     } catch (Throwable ignored) { }
 
                     // Make an instant subscribe if ocurrs any error on initialization
