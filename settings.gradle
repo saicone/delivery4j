@@ -4,7 +4,13 @@ rootProject.name = 'delivery4j'
 include(
 	'broker:broker-rabbitmq',
 	'broker:broker-redis',
-	'broker:broker-sql'
+	'broker:broker-sql',
+	'broker:broker-sql-hikari'
+)
+
+// Modules
+include(
+	'module:module-sql'
 )
 
 // Extensions

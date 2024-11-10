@@ -2,7 +2,6 @@ package com.saicone.delivery4j;
 
 import com.saicone.delivery4j.util.ByteCodec;
 import com.saicone.delivery4j.util.DelayedExecutor;
-import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -19,7 +18,7 @@ import java.util.logging.Level;
  *
  * @author Rubenicos
  */
-public abstract class Broker<T extends Broker<T>> {
+public abstract class Broker {
 
     private ChannelConsumer<byte[]> consumer = (channel, data) -> {};
     private ByteCodec<String> codec = ByteCodec.BASE64;
@@ -69,8 +68,7 @@ public abstract class Broker<T extends Broker<T>> {
      * @param channel the channel ID.
      * @param data    the byte array data to send.
      */
-    protected void onSend(@NotNull String channel, byte[] data) throws IOException {
-    }
+    protected abstract void onSend(@NotNull String channel, byte[] data) throws IOException;
 
     /**
      * Method to run when byte data was received from client.
@@ -80,9 +78,6 @@ public abstract class Broker<T extends Broker<T>> {
      */
     protected void onReceive(@NotNull String channel, byte[] data) throws IOException {
     }
-
-    @NotNull
-    protected abstract T get();
 
     @NotNull
     public ChannelConsumer<byte[]> getConsumer() {
@@ -124,32 +119,20 @@ public abstract class Broker<T extends Broker<T>> {
         return enabled;
     }
 
-    @NotNull
-    @Contract("_ -> this")
-    public T consumer(@NotNull ChannelConsumer<byte[]> consumer) {
+    public void setConsumer(@NotNull ChannelConsumer<byte[]> consumer) {
         this.consumer = consumer;
-        return get();
     }
 
-    @NotNull
-    @Contract("_ -> this")
-    public T codec(@NotNull ByteCodec<String> codec) {
+    public void setCodec(@NotNull ByteCodec<String> codec) {
         this.codec = codec;
-        return get();
     }
 
-    @NotNull
-    @Contract("_ -> this")
-    public T executor(@NotNull DelayedExecutor<?> executor) {
+    public void setExecutor(@NotNull DelayedExecutor<?> executor) {
         this.executor = executor;
-        return get();
     }
 
-    @NotNull
-    @Contract("_ -> this")
-    public T setLogger(@NotNull Logger logger) {
+    public void setLogger(@NotNull Logger logger) {
         this.logger = logger;
-        return get();
     }
 
     /**

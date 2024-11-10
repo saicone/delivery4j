@@ -1,0 +1,4 @@
+dependencies {
+    api project(':broker:broker-sql')
+    api 'com.zaxxer:HikariCP:6.0.0'
+}

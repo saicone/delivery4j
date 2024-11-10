@@ -1,8 +1,7 @@
 package com.saicone.delivery4j.broker;
 
 import com.saicone.delivery4j.Broker;
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
+import com.saicone.delivery4j.util.DataSource;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -20,48 +19,34 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  *
  * @author Rubenicos
  */
-public class HikariBroker extends Broker<HikariBroker> {
+public class SqlBroker extends Broker {
 
-    private final HikariDataSource hikari;
-    private final String tablePrefix;
+    private final DataSource source;
+
+    private String tablePrefix;
 
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private long currentID = -1;
     private Object getTask = null;
     private Object cleanTask = null;
 
-    /**
-     * Create a HikariDelivery client with provided parameters.
-     *
-     * @param url         the URL to connect with.
-     * @param username    the username to validate authentication.
-     * @param password    the password to validate authentication.
-     * @param tablePrefix the table prefix.
-     * @return            new HikariDelivery instance.
-     */
-    @NotNull
-    public static HikariBroker of(@NotNull String url, @NotNull String username, @NotNull String password, @NotNull String tablePrefix) {
-        final HikariConfig config = new HikariConfig();
-        config.setJdbcUrl(url);
-        config.setUsername(username);
-        config.setPassword(password);
-        return new HikariBroker(new HikariDataSource(config), tablePrefix);
+    public SqlBroker(@NotNull String url, @NotNull String user, @NotNull String password) throws SQLException {
+        this(DataSource.java(url, user, password));
     }
 
-    /**
-     * Constructs a HikariDelivery with provided parameters.
-     *
-     * @param hikari      the hikari instance to make database connections.
-     * @param tablePrefix the used table prefix.
-     */
-    public HikariBroker(@NotNull HikariDataSource hikari, @NotNull String tablePrefix) {
-        this.hikari = hikari;
-        this.tablePrefix = tablePrefix;
+    public SqlBroker(@NotNull Connection con) {
+        this(DataSource.java(con));
+    }
+
+    public SqlBroker(@NotNull DataSource source) {
+        this.source = source;
     }
 
     @Override
     protected void onStart() {
-        try (Connection connection = this.hikari.getConnection()) {
+        Connection connection = null;
+        try {
+            connection = this.source.getConnection();
             String createTable = "CREATE TABLE IF NOT EXISTS `" + this.tablePrefix + "messenger` (`id` INT AUTO_INCREMENT NOT NULL, `time` TIMESTAMP NOT NULL, `channel` VARCHAR(255) NOT NULL, `msg` TEXT NOT NULL, PRIMARY KEY (`id`)) DEFAULT CHARSET = utf8mb4";
             // Taken from LuckPerms
             try (Statement statement = connection.createStatement()) {
@@ -91,13 +76,23 @@ public class HikariBroker extends Broker<HikariBroker> {
                 this.cleanTask = getExecutor().execute(this::cleanMessages, 30, 30, TimeUnit.SECONDS);
             }
         } catch (SQLException e) {
-            getLogger().log(1, "Cannot start hikari connection", e);
+            getLogger().log(1, "Cannot start sql connection", e);
+        } finally {
+            if (connection != null && this.source.isClosable()) {
+                try {
+                    this.source.close();
+                } catch (SQLException e) {
+                    getLogger().log(2, "Cannot close sql connection", e);
+                }
+            }
         }
     }
 
     @Override
     protected void onClose() {
-        this.hikari.close();
+        try {
+            this.source.close();
+        } catch (SQLException ignored) { }
         if (this.getTask != null) {
             getExecutor().cancel(this.getTask);
             this.getTask = null;
@@ -115,7 +110,9 @@ public class HikariBroker extends Broker<HikariBroker> {
         }
         this.lock.readLock().lock();
 
-        try (Connection connection = this.hikari.getConnection()) {
+        Connection connection = null;
+        try {
+            connection = this.source.getConnection();
             try (PreparedStatement statement = connection.prepareStatement("INSERT INTO `" + this.tablePrefix + "messenger` (`time`, `channel`, `msg`) VALUES(NOW(), ?, ?)")) {
                 statement.setString(1, channel);
                 statement.setString(2, getCodec().encode(data));
@@ -123,35 +120,44 @@ public class HikariBroker extends Broker<HikariBroker> {
             }
         } catch (SQLException e) {
             throw new IOException(e);
+        } finally {
+            if (connection != null && this.source.isClosable()) {
+                try {
+                    this.source.close();
+                } catch (SQLException e) {
+                    getLogger().log(2, "Cannot close sql connection", e);
+                }
+            }
         }
         this.lock.readLock().unlock();
     }
 
-    @Override
-    protected @NotNull HikariBroker get() {
-        return this;
+    public void setTablePrefix(@NotNull String tablePrefix) {
+        this.tablePrefix = tablePrefix;
     }
 
-    /**
-     * Get the current hikari instance.
-     *
-     * @return a hikari instance.
-     */
     @NotNull
-    public HikariDataSource getHikari() {
-        return hikari;
+    public DataSource getSource() {
+        return source;
+    }
+
+    @NotNull
+    public String getTablePrefix() {
+        return tablePrefix;
     }
 
     /**
      * Get all unread messages from database.
      */
     public void getMessages() {
-        if (!isEnabled() || !this.hikari.isRunning()) {
+        if (!isEnabled() || !this.source.isRunning()) {
             return;
         }
         this.lock.readLock().lock();
 
-        try (Connection connection = this.hikari.getConnection()) {
+        Connection connection = null;
+        try {
+            connection = this.source.getConnection();
             try (PreparedStatement statement = connection.prepareStatement("SELECT `id`, `channel`, `msg` FROM `" + this.tablePrefix + "messenger` WHERE `id` > ? AND (NOW() - `time` < 30)")) {
                 statement.setLong(1, this.currentID);
                 try (ResultSet rs = statement.executeQuery()) {
@@ -159,8 +165,8 @@ public class HikariBroker extends Broker<HikariBroker> {
                         long id = rs.getLong("id");
                         this.currentID = Math.max(this.currentID, id);
 
-                        String channel = rs.getString("channel");
-                        String message = rs.getString("msg");
+                        final String channel = rs.getString("channel");
+                        final String message = rs.getString("msg");
                         if (getSubscribedChannels().contains(channel) && message != null) {
                             try {
                                 receive(channel, getCodec().decode(message));
@@ -173,6 +179,14 @@ public class HikariBroker extends Broker<HikariBroker> {
             }
         } catch (SQLException e) {
             getLogger().log(2, "Cannot get messages from SQL database", e);
+        } finally {
+            if (connection != null && this.source.isClosable()) {
+                try {
+                    this.source.close();
+                } catch (SQLException e) {
+                    getLogger().log(2, "Cannot close sql connection", e);
+                }
+            }
         }
         this.lock.readLock().unlock();
     }
@@ -181,17 +195,27 @@ public class HikariBroker extends Broker<HikariBroker> {
      * Clean old messages from database.
      */
     public void cleanMessages() {
-        if (!isEnabled() || !this.hikari.isRunning()) {
+        if (!isEnabled() || !this.source.isRunning()) {
             return;
         }
         this.lock.readLock().lock();
 
-        try (Connection connection = this.hikari.getConnection()) {
+        Connection connection = null;
+        try {
+            connection = this.source.getConnection();
             try (PreparedStatement statement = connection.prepareStatement("DELETE FROM `" + this.tablePrefix + "messenger` WHERE (NOW() - `time` > 60)")) {
                 statement.execute();
             }
         } catch (SQLException e) {
             getLogger().log(2, "Cannot clean old messages from SQL database", e);
+        } finally {
+            if (connection != null && this.source.isClosable()) {
+                try {
+                    this.source.close();
+                } catch (SQLException e) {
+                    getLogger().log(2, "Cannot close sql connection", e);
+                }
+            }
         }
         this.lock.readLock().unlock();
     }

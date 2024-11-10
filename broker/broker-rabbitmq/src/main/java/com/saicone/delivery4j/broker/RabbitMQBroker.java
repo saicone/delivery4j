@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
  *
  * @author Rubenicos
  */
-public class RabbitMQBroker extends Broker<RabbitMQBroker> {
+public class RabbitMQBroker extends Broker {
 
     private final Connection connection;
     private final String exchange;
@@ -185,11 +185,6 @@ public class RabbitMQBroker extends Broker<RabbitMQBroker> {
         } catch (Throwable t) {
             throw new IOException(t);
         }
-    }
-
-    @Override
-    protected @NotNull RabbitMQBroker get() {
-        return this;
     }
 
     /**

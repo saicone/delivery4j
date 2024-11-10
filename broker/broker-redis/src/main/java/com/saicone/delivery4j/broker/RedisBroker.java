@@ -17,7 +17,7 @@ import java.net.URI;
  *
  * @author Rubenicos
  */
-public class RedisBroker extends Broker<RedisBroker> {
+public class RedisBroker extends Broker {
 
     private final JedisPool pool;
     private final String password;
@@ -154,11 +154,6 @@ public class RedisBroker extends Broker<RedisBroker> {
                 }
             }
         }
-    }
-
-    @Override
-    protected @NotNull RedisBroker get() {
-        return this;
     }
 
     /**
