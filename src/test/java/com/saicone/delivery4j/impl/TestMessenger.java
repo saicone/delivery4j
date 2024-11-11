@@ -15,7 +15,7 @@ public class TestMessenger extends AbstractMessenger implements DelayedExecutor<
     }
 
     @Override
-    protected @NotNull Broker<?> loadBroker() {
+    protected @NotNull Broker loadBroker() {
         return new TestBroker();
     }
 

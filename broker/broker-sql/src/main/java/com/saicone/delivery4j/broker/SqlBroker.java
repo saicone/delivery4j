@@ -83,7 +83,7 @@ public class SqlBroker extends Broker {
         } finally {
             if (connection != null && this.source.isClosable()) {
                 try {
-                    this.source.close();
+                    connection.close();
                 } catch (SQLException e) {
                     getLogger().log(2, "Cannot close sql connection", e);
                 }
@@ -126,7 +126,7 @@ public class SqlBroker extends Broker {
         } finally {
             if (connection != null && this.source.isClosable()) {
                 try {
-                    this.source.close();
+                    connection.close();
                 } catch (SQLException e) {
                     getLogger().log(2, "Cannot close sql connection", e);
                 }
@@ -190,7 +190,7 @@ public class SqlBroker extends Broker {
         } finally {
             if (connection != null && this.source.isClosable()) {
                 try {
-                    this.source.close();
+                    connection.close();
                 } catch (SQLException e) {
                     getLogger().log(2, "Cannot close sql connection", e);
                 }
@@ -219,7 +219,7 @@ public class SqlBroker extends Broker {
         } finally {
             if (connection != null && this.source.isClosable()) {
                 try {
-                    this.source.close();
+                    connection.close();
                 } catch (SQLException e) {
                     getLogger().log(2, "Cannot close sql connection", e);
                 }

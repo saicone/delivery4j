@@ -20,7 +20,7 @@ import java.util.concurrent.Executor;
 public abstract class AbstractMessenger {
 
     private Executor executor = CompletableFuture.completedFuture(null).defaultExecutor();
-    private Broker<?> broker;
+    private Broker broker;
     private final Map<String, MessageChannel> channels = new HashMap<>();
 
     /**
@@ -43,7 +43,7 @@ public abstract class AbstractMessenger {
      * @return a delivery client or null.
      */
     @Nullable
-    public Broker<?> getBroker() {
+    public Broker getBroker() {
         return broker;
     }
 
@@ -56,7 +56,7 @@ public abstract class AbstractMessenger {
         this.executor = executor;
     }
 
-    public void setBroker(@Nullable Broker<?> broker) {
+    public void setBroker(@Nullable Broker broker) {
         this.broker = broker;
     }
 
@@ -66,7 +66,7 @@ public abstract class AbstractMessenger {
      * @return an usable delivery client.
      */
     @NotNull
-    protected Broker<?> loadBroker() {
+    protected Broker loadBroker() {
         if (getBroker() != null) {
             return getBroker();
         }
@@ -86,7 +86,7 @@ public abstract class AbstractMessenger {
      * @param broker the delivery client to use.
      */
     @SuppressWarnings("unchecked")
-    public void start(@NotNull Broker<?> broker) {
+    public void start(@NotNull Broker broker) {
         close();
 
         if (this instanceof Executor) {
@@ -94,14 +94,14 @@ public abstract class AbstractMessenger {
         }
 
         broker.getSubscribedChannels().addAll(getChannels().keySet());
-        broker.consumer(this::accept);
+        broker.setConsumer(this::accept);
         if (this instanceof ByteCodec) {
             try {
-                broker.codec((ByteCodec<String>) this);
+                broker.setCodec((ByteCodec<String>) this);
             } catch (Throwable ignored) { }
         }
         if (this instanceof DelayedExecutor) {
-            broker.executor((DelayedExecutor<?>) this);
+            broker.setExecutor((DelayedExecutor<?>) this);
         }
 
         this.broker = broker;

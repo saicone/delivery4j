@@ -5,12 +5,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 
-public class TestBroker extends Broker<TestBroker> {
-
-    @Override
-    protected @NotNull TestBroker get() {
-        return this;
-    }
+public class TestBroker extends Broker {
 
     @Override
     protected void onStart() {
