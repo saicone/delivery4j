@@ -1,6 +1,6 @@
 <h1 align="center">Delivery4j</h1>
 
-<h4 align="center">Java library wrapper for different data delivery concepts.</h4>
+<h4 align="center">Java library wrapper for multiple data delivery concepts.</h4>
 
 <p align="center">
     <a href="https://saic.one/discord">
@@ -23,8 +23,13 @@
     </a>
 </p>
 
-There are multiple ways to transfer data between Java applications, this library offers an easy way to connect with them using common methods:
+There are multiple ways to transfer data between Java applications, this library offers an easy way to connect with them using common methods.
 
-* [RabbitMQ](https://github.com/rabbitmq/rabbitmq-java-client) delivery.
-* [Redis](https://github.com/redis/jedis) messaging.
-* Sql (with [Hikari](https://github.com/brettwooldridge/HikariCP)).
+Currently supporting the brokers:
+
+* [PostgreSQL](https://github.com/pgjdbc/pgjdbc) using `LISTEN` and `NOTIFY` statement.
+* [RabbitMQ](https://github.com/rabbitmq/rabbitmq-java-client) using queue and consumer via exchange.
+* [Redis](https://github.com/redis/jedis) using publish and subscribe.
+* SQL polling (not a real broker, but can be used as one).
+
+PostgreSQL and SQL are also compatible with [Hikari](https://github.com/brettwooldridge/HikariCP).

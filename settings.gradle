@@ -2,6 +2,8 @@ rootProject.name = 'delivery4j'
 
 // Broker types
 include(
+	'broker:broker-postgresql',
+	'broker:broker-postgresql-hikari',
 	'broker:broker-rabbitmq',
 	'broker:broker-redis',
 	'broker:broker-sql',
