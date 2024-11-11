@@ -22,6 +22,9 @@ public class RabbitMQBroker extends Broker {
     private final Connection connection;
     private final String exchange;
 
+    private long checkTime = 8;
+    private TimeUnit checkUnit = TimeUnit.SECONDS;
+
     private Channel cChannel = null;
     private String queue = null;
 
@@ -137,7 +140,7 @@ public class RabbitMQBroker extends Broker {
 
         // Maintain the connection alive
         if (this.aliveTask == null) {
-            this.aliveTask = getExecutor().execute(this::alive, 30, 30, TimeUnit.SECONDS);
+            this.aliveTask = getExecutor().execute(this::alive, this.checkTime, this.checkTime, this.checkUnit);
         }
     }
 
@@ -187,6 +190,11 @@ public class RabbitMQBroker extends Broker {
         }
     }
 
+    public void setReconnectionInterval(int time, @NotNull TimeUnit unit) {
+        this.checkTime = time;
+        this.checkUnit = unit;
+    }
+
     /**
      * The current connection.
      *
@@ -207,19 +215,8 @@ public class RabbitMQBroker extends Broker {
             this.cChannel = null;
             this.reconnected = true;
             setEnabled(false);
-            while (true) {
-                getLogger().log(2, "RabbitMQ connection dropped, automatic reconnection every 8 seconds...");
-                onStart();
-                if (!isEnabled() && !Thread.interrupted()) {
-                    try {
-                        Thread.sleep(8000);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                } else {
-                    break;
-                }
-            }
+            getLogger().log(2, () -> "RabbitMQ connection dropped, automatic reconnection every " + this.checkTime + " " + this.checkUnit.name().toLowerCase() + "...");
+            onStart();
         }
     }
 

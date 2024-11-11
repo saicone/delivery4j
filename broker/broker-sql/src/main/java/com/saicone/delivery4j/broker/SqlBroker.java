@@ -24,6 +24,8 @@ public class SqlBroker extends Broker {
     private final DataSource source;
 
     private String tablePrefix;
+    private int pollTime = 10;
+    private TimeUnit pollUnit = TimeUnit.SECONDS;
 
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private long currentID = -1;
@@ -71,10 +73,10 @@ public class SqlBroker extends Broker {
             }
             setEnabled(true);
             if (this.getTask == null) {
-                this.getTask = getExecutor().execute(this::getMessages, 10, 10, TimeUnit.SECONDS);
+                this.getTask = getExecutor().execute(this::getMessages, this.pollTime, this.pollTime, this.pollUnit);
             }
             if (this.cleanTask == null) {
-                this.cleanTask = getExecutor().execute(this::cleanMessages, 30, 30, TimeUnit.SECONDS);
+                this.cleanTask = getExecutor().execute(this::cleanMessages, this.pollTime * 30L, this.pollTime * 30L, this.pollUnit);
             }
         } catch (SQLException e) {
             getLogger().log(1, "Cannot start sql connection", e);
@@ -135,6 +137,11 @@ public class SqlBroker extends Broker {
 
     public void setTablePrefix(@NotNull String tablePrefix) {
         this.tablePrefix = tablePrefix;
+    }
+
+    public void setPollInterval(int time, @NotNull TimeUnit unit) {
+        this.pollTime = time;
+        this.pollUnit = unit;
     }
 
     @NotNull

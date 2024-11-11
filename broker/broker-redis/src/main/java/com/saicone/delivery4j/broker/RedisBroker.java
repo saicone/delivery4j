@@ -11,6 +11,7 @@ import redis.clients.jedis.exceptions.JedisDataException;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Redis integration for data delivery.
@@ -22,6 +23,9 @@ public class RedisBroker extends Broker {
     private final JedisPool pool;
     private final String password;
     private final Bridge bridge;
+
+    private long sleepTime = 8;
+    private TimeUnit sleepUnit = TimeUnit.SECONDS;
 
     private Object aliveTask;
 
@@ -156,6 +160,11 @@ public class RedisBroker extends Broker {
         }
     }
 
+    public void setReconnectionInterval(int time, @NotNull TimeUnit unit) {
+        this.sleepTime = time;
+        this.sleepUnit = unit;
+    }
+
     /**
      * The current pool.
      *
@@ -200,7 +209,7 @@ public class RedisBroker extends Broker {
                 // Thread was unlocked due error
                 if (isEnabled()) {
                     if (reconnected) {
-                        getLogger().log(2, "Redis connection dropped, automatic reconnection in 8 seconds...\n" + t.getMessage());
+                        getLogger().log(2, () -> "Redis connection dropped, automatic reconnection in " + this.sleepTime + " " + this.sleepUnit.name().toLowerCase() + "...", t);
                     }
                     try {
                         this.bridge.unsubscribe();
@@ -211,7 +220,7 @@ public class RedisBroker extends Broker {
                         reconnected = true;
                     } else {
                         try {
-                            Thread.sleep(8000);
+                            Thread.sleep(this.sleepUnit.toMillis(this.sleepTime));
                         } catch (InterruptedException e) {
                             Thread.currentThread().interrupt();
                         }
