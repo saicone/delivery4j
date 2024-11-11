@@ -1,4 +1,4 @@
 dependencies {
     api project(':broker:broker-postgresql')
-    api 'com.zaxxer:HikariCP:6.0.0'
+    api 'com.zaxxer:HikariCP:6.1.0'
 }
