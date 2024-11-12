@@ -155,7 +155,7 @@ public class PostgreSQLBroker extends Broker {
 
     private void listen() {
         try {
-            while (isEnabled()) {
+            while (isEnabled() && !Thread.interrupted()) {
                 final PGNotification[] notifications = this.pgConnection.getNotifications(this.timeout);
                 if (notifications == null) {
                     continue;

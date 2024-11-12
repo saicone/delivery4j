@@ -117,7 +117,9 @@ public class RedisBroker extends Broker {
         try {
             this.bridge.unsubscribe();
         } catch (Throwable ignored) { }
-        this.pool.destroy();
+        try {
+            this.pool.destroy();
+        } catch (Throwable ignored) { }
         if (this.aliveTask != null) {
             getExecutor().cancel(this.aliveTask);
         }
