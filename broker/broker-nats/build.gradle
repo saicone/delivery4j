@@ -1,0 +1,3 @@
+dependencies {
+    api 'io.nats:jnats:2.20.4'
+}

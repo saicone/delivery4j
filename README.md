@@ -28,6 +28,7 @@ There are multiple ways to transfer data between Java applications, this library
 Currently supporting the brokers:
 
 * [Kafka](https://github.com/apache/kafka) using empty-key records to producers.
+* [NATS](https://github.com/nats-io/nats.java) using subject subscription.
 * [PostgreSQL](https://github.com/pgjdbc/pgjdbc) using `LISTEN` and `NOTIFY` statement.
 * [RabbitMQ](https://github.com/rabbitmq/rabbitmq-java-client) using queue and consumer via exchange.
 * [Redis](https://github.com/redis/jedis) using publish and subscribe.
