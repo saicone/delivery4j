@@ -210,7 +210,7 @@ public class RabbitMQBroker extends Broker {
         if (!isEnabled()) {
             return;
         }
-        if (this.connection == null || !this.connection.isOpen() || this.cChannel == null || !this.cChannel.isOpen()) {
+        if (!this.connection.isOpen() || this.cChannel == null || !this.cChannel.isOpen()) {
             close(this.cChannel, this.connection);
             this.cChannel = null;
             this.reconnected = true;

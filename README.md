@@ -27,6 +27,7 @@ There are multiple ways to transfer data between Java applications, this library
 
 Currently supporting the brokers:
 
+* [ActiveMQ](https://github.com/apache/activemq) using topic producers and consumers.
 * [Kafka](https://github.com/apache/kafka) using empty-key records to producers.
 * [NATS](https://github.com/nats-io/nats.java) using subject subscription.
 * [PostgreSQL](https://github.com/pgjdbc/pgjdbc) using `LISTEN` and `NOTIFY` statement.
