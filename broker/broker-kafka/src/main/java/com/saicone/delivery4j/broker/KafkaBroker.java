@@ -21,6 +21,15 @@ import java.time.Duration;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Kafka broker implementation to publish and consumer using empty-keys records.<br>
+ * Take in count that any producer and consumer used in this instance should be
+ * compatible with byte array values.
+ *
+ * @author Rubenicos
+ *
+ * @param <K> the key object type.
+ */
 public class KafkaBroker<K> extends Broker {
 
     private final KafkaProducer<K, byte[]> producer;
@@ -36,6 +45,14 @@ public class KafkaBroker<K> extends Broker {
     private Object listenTask;
     private boolean reconnected = false;
 
+    /**
+     * Create a kafka broker with provided parameters.<br>
+     * This method by default use `void` keys to provide a full empty-key interaction.
+     *
+     * @param bootstrapServers the boostrap server config.
+     * @param groupId          the consumer group ID.
+     * @return                 a newly generated kafka broker.
+     */
     @NotNull
     public static KafkaBroker<Void> of(@NotNull String bootstrapServers, @NotNull String groupId) {
         final Properties producerProperties = new Properties();
@@ -52,10 +69,22 @@ public class KafkaBroker<K> extends Broker {
         return new KafkaBroker<>(producerProperties, consumerProperties);
     }
 
+    /**
+     * Constructs a kafka broker using provided properties for producer and consumer.
+     *
+     * @param producerProperties the properties used to construct a producer.
+     * @param consumerProperties the properties used to construct a consumer.
+     */
     public KafkaBroker(@NotNull Properties producerProperties, @NotNull Properties consumerProperties) {
         this(new KafkaProducer<>(producerProperties), new KafkaConsumer<>(consumerProperties));
     }
 
+    /**
+     * Constructs a kafka broker using provided producer and consumer.
+     *
+     * @param producer the producer to send messages.
+     * @param consumer the consumer that accept messages.
+     */
     public KafkaBroker(@NotNull KafkaProducer<K, byte[]> producer, @NotNull KafkaConsumer<K, byte[]> consumer) {
         this.producer = producer;
         this.consumer = consumer;
@@ -110,6 +139,12 @@ public class KafkaBroker<K> extends Broker {
         send(new ProducerRecord<>(channel, this.partition, this.key, data, this.headers));
     }
 
+    /**
+     * Send a producer record into current producer.
+     *
+     * @param record the record to send.
+     * @throws IOException if send fails.
+     */
     public void send(@NotNull ProducerRecord<K, byte[]> record) throws IOException {
         try {
             this.producer.send(record);
@@ -118,33 +153,67 @@ public class KafkaBroker<K> extends Broker {
         }
     }
 
+    /**
+     * Set the default partition used on every producer record created by this instance.
+     *
+     * @param partition the partition to which the records should be sent.
+     */
     public void setPartition(@Nullable Integer partition) {
         this.partition = partition;
     }
 
+    /**
+     * Set the default headers used on every producer record created by this instance.
+     *
+     * @param headers the headers that will be included in the records.
+     */
     public void setHeaders(@Nullable Iterable<Header> headers) {
         this.headers = headers;
     }
 
+    /**
+     * Set the default key used on every producer record created by this instance.
+     *
+     * @param key the key that will be included in the records.
+     */
     public void setKey(@Nullable K key) {
         this.key = key;
     }
 
+    /**
+     * Set the record poll timeout, this is the maximum communication delay between applications.<br>
+     * By default, 5 seconds is used.
+     *
+     * @param time the maximum time to block.
+     * @param unit the unit that {@code time} is expressed in.
+     */
     public void setTimeout(long time, @NotNull TimeUnit unit) {
         this.timeout = Duration.of(time, unit.toChronoUnit());
     }
 
+    /**
+     * Set the reconnection interval that will be used on this kafka broker instance.<br>
+     * By default, 8 seconds is used.
+     *
+     * @param time the time to wait until reconnection is performed.
+     * @param unit the unit that {@code time} is expressed in.
+     */
     public void setReconnectionInterval(int time, @NotNull TimeUnit unit) {
         this.sleepTime = time;
         this.sleepUnit = unit;
     }
 
+    /**
+     * Get the current producer.
+     *
+     * @return a kafka producer.
+     */
     @NotNull
     public KafkaProducer<K, byte[]> getProducer() {
         return producer;
     }
 
-    public void listen() {
+    private void listen() {
         try {
             while (isEnabled() && !Thread.interrupted()) {
                 final ConsumerRecords<K, byte[]> records = this.consumer.poll(this.timeout);

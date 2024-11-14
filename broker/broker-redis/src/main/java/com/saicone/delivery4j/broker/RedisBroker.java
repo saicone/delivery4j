@@ -12,16 +12,20 @@ import redis.clients.jedis.exceptions.JedisDataException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 /**
- * Redis integration for data delivery.
+ * Redis broker implementation to send data via publish and subscriptions.<br>
+ * This kind of broker will encode any byte array as String and viceversa.<br>
+ * Some operations made in this instance can fail due authentication errors,
+ * so it requires the password as well.
  *
  * @author Rubenicos
  */
 public class RedisBroker extends Broker {
 
     private final JedisPool pool;
-    private final String password;
+    private final Supplier<String> password;
     private final Bridge bridge;
 
     private long sleepTime = 8;
@@ -30,10 +34,11 @@ public class RedisBroker extends Broker {
     private Object aliveTask;
 
     /**
-     * Create a RedisDelivery client with provided parameters.
+     * Create a redis broker with provided url.<br>
+     * This method will try to extract any password from provided url.
      *
      * @param url the URL to connect with.
-     * @return    new RedisDelivery instance.
+     * @return    a newly generated redis broker instance.
      */
     @NotNull
     public static RedisBroker of(@NotNull String url) {
@@ -52,11 +57,11 @@ public class RedisBroker extends Broker {
     }
 
     /**
-     * Create a RedisDelivery client with provided parameters.
+     * Create a redis broker with provided url and password.
      *
      * @param uri      the URL object to connect with.
      * @param password the password to validate authentication.
-     * @return         new RedisDelivery instance.
+     * @return         a newly generated redis broker instance.
      */
     @NotNull
     public static RedisBroker of(@NotNull URI uri, @NotNull String password) {
@@ -64,14 +69,14 @@ public class RedisBroker extends Broker {
     }
 
     /**
-     * Create a RedisDelivery client with provided parameters.
+     * Create a redis broker with provided parameters.
      *
      * @param host     the host to connect.
      * @param port     the port host.
      * @param password the password to validate authentication.
      * @param database the database number.
      * @param ssl      true to use SSL.
-     * @return         new RedisDelivery instance.
+     * @return         a newly generated redis broker instance.
      */
     @NotNull
     public static RedisBroker of(@NotNull String host, int port, @NotNull String password, int database, boolean ssl) {
@@ -79,19 +84,19 @@ public class RedisBroker extends Broker {
     }
 
     /**
-     * Constructs a RedisDelivery with provided parameters.
+     * Constructs a redis broker with provided pool and password.
      *
      * @param pool     the pool to connect with.
      * @param password the used redis password.
      */
     public RedisBroker(@NotNull JedisPool pool, @NotNull String password) {
         this.pool = pool;
-        this.password = password;
+        this.password = password(password);
         this.bridge = new Bridge();
     }
 
     /**
-     * Constructs a RedisDelivery with provided parameters.
+     * Constructs a redis broker with provided parameters.
      *
      * @param pool     the pool to connect with.
      * @param password the used redis password.
@@ -99,8 +104,22 @@ public class RedisBroker extends Broker {
      */
     public RedisBroker(@NotNull JedisPool pool, @NotNull String password, @NotNull Bridge bridge) {
         this.pool = pool;
-        this.password = password;
+        this.password = password(password);
         this.bridge = bridge;
+    }
+
+    @NotNull
+    private Supplier<String> password(@NotNull String password) {
+        return () -> {
+            var stack = Thread.currentThread().getStackTrace();
+            for (int i = 2; i < stack.length; i++) {
+                if (stack[i].getClassName().equals(RedisBroker.class.getName())) {
+                    return password;
+                }
+            }
+
+            throw new SecurityException("Redis password is only accessible from Redis broker instance");
+        };
     }
 
     @Override
@@ -156,7 +175,7 @@ public class RedisBroker extends Broker {
             } catch (JedisDataException e) {
                 // Fix Java +16 error
                 if (e.getMessage().contains("NOAUTH")) {
-                    jedis.auth(this.password);
+                    jedis.auth(this.password.get());
                     jedis.publish(channel, message);
                 } else {
                     throw new IOException(e);
@@ -165,29 +184,26 @@ public class RedisBroker extends Broker {
         }
     }
 
+    /**
+     * Set the reconnection interval that will be used on this redis broker instance.<br>
+     * By default, 8 seconds is used.
+     *
+     * @param time the time to wait until reconnection is performed.
+     * @param unit the unit that {@code time} is expressed in.
+     */
     public void setReconnectionInterval(int time, @NotNull TimeUnit unit) {
         this.sleepTime = time;
         this.sleepUnit = unit;
     }
 
     /**
-     * The current pool.
+     * Get the current pool.
      *
      * @return a jedis pool object.
      */
     @NotNull
     public JedisPool getPool() {
         return pool;
-    }
-
-    /**
-     * The current password for authentication.
-     *
-     * @return a String password.
-     */
-    @NotNull
-    public String getPassword() {
-        return password;
     }
 
     /**

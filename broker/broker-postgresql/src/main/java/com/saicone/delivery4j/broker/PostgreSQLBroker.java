@@ -14,6 +14,18 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * PostgreSQL broker implementation to send data using {@code LISTEN} and {@code NOTIFY} statements.<br>
+ * <br>
+ * <b>Is this scalable?</b><br>
+ * No<br>
+ * <b>Allows large messages?</b><br>
+ * No<br>
+ * <b>Should I use it?</b><br>
+ * Maybe
+ *
+ * @author Rubenicos
+ */
 public class PostgreSQLBroker extends Broker {
 
     private final DataSource source;
@@ -28,6 +40,15 @@ public class PostgreSQLBroker extends Broker {
     private Object listenTask;
     private boolean reconnected = false;
 
+    /**
+     * Create a postgres broker with the provided connection parameters.
+     *
+     * @param url      the database url.
+     * @param user     the database user on whose behalf the connection is being made.
+     * @param password the user's password.
+     * @return         a newly generated sql broker containing the connection.
+     * @throws SQLException if a database access error occurs.
+     */
     @NotNull
     public static PostgreSQLBroker of(@NotNull String url, @NotNull String user, @NotNull String password) throws SQLException {
         final PGSimpleDataSource dataSource = new PGSimpleDataSource();
@@ -37,10 +58,21 @@ public class PostgreSQLBroker extends Broker {
         return new PostgreSQLBroker(dataSource.getConnection());
     }
 
+    /**
+     * Constructs a postgres broker using the provided connection instance.<br>
+     * This constructor assumes that the given connection should not be closed after return it.
+     *
+     * @param con the connection that will be wrapped as non-cancellable data source.
+     */
     public PostgreSQLBroker(@NotNull Connection con) {
         this(DataSource.java(con));
     }
 
+    /**
+     * Constructs a postgres broker using the provided data source instance.
+     *
+     * @param source the data source that provide a database connection.
+     */
     public PostgreSQLBroker(@NotNull DataSource source) {
         this.source = source;
     }
@@ -139,15 +171,35 @@ public class PostgreSQLBroker extends Broker {
         }
     }
 
+    /**
+     * Set timeout that will be used to listen for new notifications from database,
+     * this is the maximum communication delay between applications.<br>
+     * By default, 5 seconds is used.
+     *
+     * @param time the delay between listen execution.
+     * @param unit the unit that {@code time} is expressed in.
+     */
     public void setTimeout(long time, @NotNull TimeUnit unit) {
         this.timeout = (int) unit.toMillis(time);
     }
 
+    /**
+     * Set the reconnection interval that will be used on this postgres broker instance.<br>
+     * By default, 8 seconds is used.
+     *
+     * @param time the time to wait until reconnection is performed.
+     * @param unit the unit that {@code time} is expressed in.
+     */
     public void setReconnectionInterval(int time, @NotNull TimeUnit unit) {
         this.sleepTime = time;
         this.sleepUnit = unit;
     }
 
+    /**
+     * Get the current data source that database connection is from.
+     *
+     * @return a data source connection.
+     */
     @NotNull
     public DataSource getSource() {
         return source;

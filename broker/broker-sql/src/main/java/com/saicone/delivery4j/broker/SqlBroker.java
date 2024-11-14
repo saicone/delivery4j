@@ -15,7 +15,9 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
- * Sql integration for data delivery using Hikari library.
+ * Sql broker implementation to send data via polling.<br>
+ * Take in count that this is not a real broker, can be used as one
+ * but the client is doing all the job via insertion and repeatable deletion.
  *
  * @author Rubenicos
  */
@@ -32,15 +34,35 @@ public class SqlBroker extends Broker {
     private Object getTask = null;
     private Object cleanTask = null;
 
+    /**
+     * Create a sql broker with the provided connection parameters.
+     *
+     * @param url      the database url.
+     * @param user     the database user on whose behalf the connection is being made.
+     * @param password the user's password.
+     * @return         a newly generated sql broker containing the connection.
+     * @throws SQLException if a database access error occurs.
+     */
     @NotNull
     public static SqlBroker of(@NotNull String url, @NotNull String user, @NotNull String password) throws SQLException {
         return new SqlBroker(DataSource.java(url, user, password));
     }
 
+    /**
+     * Constructs a sql broker using the provided connection instance.<br>
+     * This constructor assumes that the given connection should not be closed after return it.
+     *
+     * @param con the connection that will be wrapped as non-cancellable data source.
+     */
     public SqlBroker(@NotNull Connection con) {
         this(DataSource.java(con));
     }
 
+    /**
+     * Constructs a sql broker using the provided data source instance.
+     *
+     * @param source the data source that provide a database connection.
+     */
     public SqlBroker(@NotNull DataSource source) {
         this.source = source;
     }
@@ -135,20 +157,46 @@ public class SqlBroker extends Broker {
         this.lock.readLock().unlock();
     }
 
+    /**
+     * Set the table prefix that will be used before {@code messenger} table name.
+     *
+     * @param tablePrefix a table prefix.
+     */
     public void setTablePrefix(@NotNull String tablePrefix) {
         this.tablePrefix = tablePrefix;
     }
 
+    /**
+     * Set the poll that will be used to check for new messages from database,
+     * this is the maximum communication delay between applications.<br>
+     * Setting a different poll interval between applications may cause
+     * synchronization errors due it's value is multiplied by 3 to delete old
+     * messages from database in that interval.<br>
+     * By default, 10 seconds is used.
+     *
+     * @param time the delay between database poll.
+     * @param unit the unit that {@code time} is expressed in.
+     */
     public void setPollInterval(int time, @NotNull TimeUnit unit) {
         this.pollTime = time;
         this.pollUnit = unit;
     }
 
+    /**
+     * Get the current data source that database connection is from.
+     *
+     * @return a data source connection.
+     */
     @NotNull
     public DataSource getSource() {
         return source;
     }
 
+    /**
+     * Get the current table prefix that is used before {@code messenger} table name.
+     *
+     * @return a table prefix.
+     */
     @NotNull
     public String getTablePrefix() {
         return tablePrefix;

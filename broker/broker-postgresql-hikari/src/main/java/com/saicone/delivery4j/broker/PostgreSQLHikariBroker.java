@@ -8,10 +8,24 @@ import org.jetbrains.annotations.NotNull;
 import java.sql.Connection;
 import java.sql.SQLException;
 
+/**
+ * PostgreSQL broker implementation that use hikari library to make connections to database.<br>
+ * The operations are the same as PostgreSQL broker, it just made any connection with hikari library.
+ *
+ * @author Rubenicos
+ */
 public class PostgreSQLHikariBroker extends PostgreSQLBroker {
 
     private final HikariDataSource hikari;
 
+    /**
+     * Create a postgres hikari broker with the provided connection parameters.
+     *
+     * @param url      the database url.
+     * @param user     the database user on whose behalf the connection is being made.
+     * @param password the user's password.
+     * @return         a newly generated hikari broker containing the connection.
+     */
     @NotNull
     public static PostgreSQLHikariBroker of(@NotNull String url, @NotNull String user, @NotNull String password) {
         final HikariConfig config = new HikariConfig();
@@ -21,6 +35,11 @@ public class PostgreSQLHikariBroker extends PostgreSQLBroker {
         return new PostgreSQLHikariBroker(new HikariDataSource(config));
     }
 
+    /**
+     * Constructs a postgres hikari broker using the provided data source instance.
+     *
+     * @param hikari the data source that will be wrapped as cancellable data source.
+     */
     public PostgreSQLHikariBroker(@NotNull HikariDataSource hikari) {
         super(new DataSource() {
             @Override
@@ -46,6 +65,11 @@ public class PostgreSQLHikariBroker extends PostgreSQLBroker {
         this.hikari = hikari;
     }
 
+    /**
+     * Get the current hikari data source used on this instance.
+     *
+     * @return a hikari data source.
+     */
     @NotNull
     public HikariDataSource getHikari() {
         return hikari;

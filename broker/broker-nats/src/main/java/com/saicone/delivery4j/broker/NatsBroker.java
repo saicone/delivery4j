@@ -12,17 +12,44 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.function.Consumer;
 
+/**
+ * NATS broker implementation to publish data and consume it with subject subscription.
+ *
+ * @author Rubenicos
+ */
 public class NatsBroker extends Broker {
 
     private final Connection connection;
 
     private Dispatcher dispatcher;
 
+    /**
+     * Create a nats broker with provided parameters.
+     *
+     * @param host         the server host, wrapped as nats url.
+     * @param userName     the username used to connect to server.
+     * @param password     the password used along with username, in plain text.
+     * @param reconnection true to set up a reconnection time of 8 seconds if connection fails, false otherwise.
+     * @return             a newly generated nats broker instance.
+     * @throws IOException if a networking issue occurs.
+     * @throws InterruptedException if the current thread is interrupted.
+     */
     @NotNull
     public static NatsBroker of(@NotNull String host, @Nullable String userName, @Nullable String password, boolean reconnection) throws IOException, InterruptedException {
         return of(host, userName, password, reconnection ? Duration.ofSeconds(8) : null);
     }
 
+    /**
+     * Create a nats broker with provided parameters.
+     *
+     * @param host         the server host, wrapped as nats url.
+     * @param userName     the username used to connect to server.
+     * @param password     the password used along with username, in plain text.
+     * @param reconnection the reconnection duration interval to be used to reconnect to server, if connection fails.
+     * @return             a newly generated nats broker instance.
+     * @throws IOException if a networking issue occurs.
+     * @throws InterruptedException if the current thread is interrupted.
+     */
     @NotNull
     public static NatsBroker of(@NotNull String host, @Nullable String userName, @Nullable String password, @Nullable Duration reconnection) throws IOException, InterruptedException {
         return of(builder -> {
@@ -43,6 +70,14 @@ public class NatsBroker extends Broker {
         });
     }
 
+    /**
+     * Create a nats broker by providing builder options.
+     *
+     * @param consumer the operation that accept the builder of nats connection.
+     * @return         a newly generated nats broker instance.
+     * @throws IOException if a networking issue occurs.
+     * @throws InterruptedException if the current thread is interrupted.
+     */
     @NotNull
     public static NatsBroker of(@NotNull Consumer<Options.Builder> consumer) throws IOException, InterruptedException {
         final Options.Builder builder = new Options.Builder();
@@ -50,6 +85,11 @@ public class NatsBroker extends Broker {
         return new NatsBroker(Nats.connect(builder.build()));
     }
 
+    /**
+     * Constructs a nats broker with provided connection.
+     *
+     * @param connection the nats server connection.
+     */
     public NatsBroker(@NotNull Connection connection) {
         this.connection = connection;
     }
@@ -99,11 +139,21 @@ public class NatsBroker extends Broker {
         }
     }
 
+    /**
+     * Get the current connection.
+     *
+     * @return a nats serve connection.
+     */
     @NotNull
     public Connection getConnection() {
         return connection;
     }
 
+    /**
+     * Get the current dispatcher.
+     *
+     * @return the dispatcher used to listen connections.
+     */
     @NotNull
     public Dispatcher getDispatcher() {
         return dispatcher;

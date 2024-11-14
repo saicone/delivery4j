@@ -62,6 +62,7 @@ public abstract class Broker {
      *
      * @param channel the channel name.
      * @param data    the byte array data to send.
+     * @throws IOException if any error occurs while sending the data.
      */
     protected abstract void onSend(@NotNull String channel, byte[] data) throws IOException;
 
@@ -70,6 +71,7 @@ public abstract class Broker {
      *
      * @param channel the channel name.
      * @param data    the received byte array data.
+     * @throws IOException if any error occurs while receiving the data.
      */
     protected void onReceive(@NotNull String channel, byte[] data) throws IOException {
     }
@@ -251,6 +253,7 @@ public abstract class Broker {
      *
      * @param channel the channel name.
      * @param data    the data to send.
+     * @throws IOException if anny error occurs while sending the data.
      */
     public void send(@NotNull String channel, byte[] data) throws IOException {
         onSend(channel, data);
@@ -261,6 +264,7 @@ public abstract class Broker {
      *
      * @param channel the channel name.
      * @param data    the data to receive.
+     * @throws IOException if any error occurs while receiving the data.
      */
     public void receive(@NotNull String channel, byte[] data) throws IOException {
         getConsumer().accept(channel, data);

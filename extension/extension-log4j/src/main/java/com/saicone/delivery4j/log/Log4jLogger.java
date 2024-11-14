@@ -9,10 +9,20 @@ import org.jetbrains.annotations.NotNull;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+/**
+ * Log4j integration for broker logging.
+ *
+ * @author Rubenicos
+ */
 public class Log4jLogger implements Broker.Logger {
 
     private final Logger logger;
 
+    /**
+     * Create a log4j logger to provided class.
+     *
+     * @param clazz the class owning the logger.
+     */
     public Log4jLogger(@NotNull Class<?> clazz) {
         this.logger = LogManager.getLogger(clazz);
     }

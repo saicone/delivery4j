@@ -13,7 +13,7 @@ import java.net.URI;
 import java.util.concurrent.TimeUnit;
 
 /**
- * RabbitMQ integration for data delivery.
+ * RabbitMQ broker implementation to send data using queue and consumer via exchange.
  *
  * @author Rubenicos
  */
@@ -32,11 +32,11 @@ public class RabbitMQBroker extends Broker {
     private boolean reconnected = false;
 
     /**
-     * Create a RabbitMQDelivery client with provided parameters.
+     * Create a rabbitmq broker with provided parameters.
      *
      * @param url      the URL to connect with.
      * @param exchange the pre-channel to use.
-     * @return         new RabbitMQDelivery instance.
+     * @return         a newly generated rabbitmq broker.
      */
     @NotNull
     public static RabbitMQBroker of(@NotNull String url, @NotNull String exchange) {
@@ -48,11 +48,11 @@ public class RabbitMQBroker extends Broker {
     }
 
     /**
-     * Create a RabbitMQDelivery client with provided parameters.
+     * Create a rabbitmq broker with provided parameters.
      *
      * @param uri      the URL object to connect with.
      * @param exchange the pre-channel to use.
-     * @return         new RabbitMQDelivery instance.
+     * @return         a newly generated rabbitmq broker.
      */
     @NotNull
     public static RabbitMQBroker of(@NotNull URI uri, @NotNull String exchange) {
@@ -66,7 +66,7 @@ public class RabbitMQBroker extends Broker {
     }
 
     /**
-     * Create a RabbitMQDelivery client with provided parameters.
+     * Create a rabbitmq broker with provided parameters.
      *
      * @param host        the host to connect.
      * @param port        the port host.
@@ -74,7 +74,7 @@ public class RabbitMQBroker extends Broker {
      * @param password    the password to validate authentication.
      * @param virtualHost the virtual host.
      * @param exchange    the pre-channel to use.
-     * @return            new RabbitMQDelivery instance.
+     * @return            a newly generated rabbitmq broker.
      */
     @NotNull
     public static RabbitMQBroker of(@NotNull String host, int port, @NotNull String username, @NotNull String password, @NotNull String virtualHost, @NotNull String exchange) {
@@ -92,7 +92,7 @@ public class RabbitMQBroker extends Broker {
     }
 
     /**
-     * Constructs a RabbitMQDelivery with provided parameters.
+     * Constructs a rabbitmq broker with provided parameters.
      *
      * @param connection the connection to interact with.
      * @param exchange   the pre-channel to use.
@@ -190,6 +190,12 @@ public class RabbitMQBroker extends Broker {
         }
     }
 
+    /**
+     * Set the reconnection interval that will be used on this redis broker instance.
+     *
+     * @param time the time to wait until reconnection is performed.
+     * @param unit the unit that {@code time} is expressed in.
+     */
     public void setReconnectionInterval(int time, @NotNull TimeUnit unit) {
         this.checkTime = time;
         this.checkUnit = unit;
@@ -198,7 +204,7 @@ public class RabbitMQBroker extends Broker {
     /**
      * The current connection.
      *
-     * @return a RabbitMQ connection object.
+     * @return a rabbitmq connection object.
      */
     @NotNull
     public Connection getConnection() {

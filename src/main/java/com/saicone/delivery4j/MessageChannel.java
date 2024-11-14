@@ -195,6 +195,7 @@ public class MessageChannel {
      *
      * @param lines message to encode.
      * @return      a byte array that represent the message.
+     * @throws IOException if the message lines cannot be encoded as bytes.
      */
     public byte[] encode(@Nullable Object... lines) throws IOException {
         try (ByteArrayOutputStream arrayOut = new ByteArrayOutputStream(); DataOutputStream out = new DataOutputStream(arrayOut)) {
@@ -226,6 +227,7 @@ public class MessageChannel {
      *
      * @param src the byte array to decode.
      * @return    a message from byte array.
+     * @throws IOException if the bytes cannot be decoded from bytes.
      */
     @Nullable
     public String[] decode(byte[] src) throws IOException {
@@ -287,6 +289,14 @@ public class MessageChannel {
      */
     public static abstract class Cache {
 
+        /**
+         * Create a cache with provided expiration.<br>
+         * This method try to find the best available implementation and uses it.
+         *
+         * @param duration the length of time after a message ID is automatically removed.
+         * @param unit     the unit that {@code duration} is expressed in.
+         * @return         a newly generate cache instance.
+         */
         @NotNull
         public static Cache of(long duration, @NotNull TimeUnit unit) {
             try {

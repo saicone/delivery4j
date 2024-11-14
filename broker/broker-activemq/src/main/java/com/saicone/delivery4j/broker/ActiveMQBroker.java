@@ -19,6 +19,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 
+/**
+ * ActiveMQ broker implementation to send data using topic producers and consumers.
+ *
+ * @author Rubenicos
+ */
 public class ActiveMQBroker extends Broker {
 
     private final Connection connection;
@@ -27,6 +32,13 @@ public class ActiveMQBroker extends Broker {
 
     private final Map<String, Bridge> bridges = new HashMap<>();
 
+    /**
+     * Create an activemq broker by providing connection factory.
+     *
+     * @param consumer the operation that accept the activemq connection factory.
+     * @return         a newly generated activemq broker.
+     * @throws JMSException if any error occurs while creating the connection.
+     */
     @NotNull
     public static ActiveMQBroker of(@NotNull Consumer<ActiveMQConnectionFactory> consumer) throws JMSException {
         final ActiveMQConnectionFactory factory = new ActiveMQConnectionFactory();
@@ -34,6 +46,11 @@ public class ActiveMQBroker extends Broker {
         return new ActiveMQBroker(factory.createConnection());
     }
 
+    /**
+     * Create an activemq broker by providing a connection.
+     *
+     * @param connection the connection used by the broker.
+     */
     public ActiveMQBroker(@NotNull Connection connection) {
         this.connection = connection;
     }
@@ -102,12 +119,21 @@ public class ActiveMQBroker extends Broker {
         }
     }
 
+    /**
+     * Bridge class to save message producer and consumer for specific topic.
+     */
     public class Bridge implements MessageListener {
 
         private final String channel;
         private final MessageProducer producer;
         private final MessageConsumer consumer;
 
+        /**
+         * Constructs a bridge with the provided channel.
+         *
+         * @param channel the channel that will be used to create a topic.
+         * @throws JMSException if any error occurs while creating activemq objects.
+         */
         public Bridge(@NotNull String channel) throws JMSException {
             this.channel = channel;
 
@@ -133,27 +159,51 @@ public class ActiveMQBroker extends Broker {
             }
         }
 
+        /**
+         * Get the current subscribed channel.
+         *
+         * @return the topic as channel name.
+         */
         @NotNull
         public String getChannel() {
             return channel;
         }
 
+        /**
+         * Get the current producer used to send messages to topic.
+         *
+         * @return a message producer.
+         */
         @NotNull
         public MessageProducer getProducer() {
             return producer;
         }
 
+        /**
+         * Get the current consumer used to listed messages from topic.
+         *
+         * @return a message consumer.
+         */
         @NotNull
         public MessageConsumer getConsumer() {
             return consumer;
         }
 
+        /**
+         * Send data to producer.
+         *
+         * @param data the data that will be wrapped as bytes message.
+         * @throws JMSException if any error occurs while sending the data.
+         */
         public void send(byte[] data) throws JMSException {
             final BytesMessage message = ActiveMQBroker.this.session.createBytesMessage();
             message.writeBytes(data);
             this.producer.send(message);
         }
 
+        /**
+         * Close the current activemq connection.
+         */
         public void close() {
             try {
                 this.producer.close();

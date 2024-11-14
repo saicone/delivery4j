@@ -5,10 +5,20 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Slf4j integration for broker logging.
+ *
+ * @author Rubenicos
+ */
 public class Slf4jLogger implements Broker.Logger {
 
     private final Logger logger;
 
+    /**
+     * Create a slf4j logger to provided class.
+     *
+     * @param clazz the class owning the logger.
+     */
     public Slf4jLogger(@NotNull Class<?> clazz) {
         this.logger = LoggerFactory.getLogger(clazz);
     }
