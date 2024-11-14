@@ -126,6 +126,9 @@ public abstract class AbstractMessenger {
         if (this instanceof DelayedExecutor) {
             broker.setExecutor((DelayedExecutor<?>) this);
         }
+        if (this instanceof Broker.Logger) {
+            broker.setLogger((Broker.Logger) this);
+        }
 
         this.broker = broker;
         this.broker.start();
