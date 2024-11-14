@@ -269,6 +269,5 @@ MessageChannel channel = messenger.subscribe("myChannel1").consume((channel, lin
 // Your key
 SecretKey key = ...;
 
-// Cache with provided expiration
 channel.encryptor(Encryptor.of(key));
 ```

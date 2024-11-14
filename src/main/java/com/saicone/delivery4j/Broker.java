@@ -5,16 +5,17 @@ import com.saicone.delivery4j.util.DelayedExecutor;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 
 /**
- * Delivery client abstract class with common methods to transfer data and initialize any connection.
+ * Represents an object that can transfer byte-array data across channels.<br>
+ * In popular terms, this is a globalized producer that deliver/publish temporary
+ * data to multiple consumers using topics or queues (depending on the implementation)
+ * and can also consume the data itself by subscribing to channels.
  *
  * @author Rubenicos
  */
@@ -25,76 +26,90 @@ public abstract class Broker {
     private DelayedExecutor<?> executor = DelayedExecutor.JAVA;
     private Logger logger = Logger.of(this.getClass());
 
-    /**
-     * A Set of subscribed channels IDs.
-     */
     private final Set<String> subscribedChannels = new HashSet<>();
-    /**
-     * Boolean object to mark the current delivery client as enabled or disabled.
-     */
     private boolean enabled = false;
 
     /**
-     * Method to run when client starts
+     * Method to run when broker starts
      */
     protected void onStart() {
     }
 
     /**
-     * Method to run when client stops.
+     * Method to run when broker closes.
      */
     protected void onClose() {
     }
 
     /**
-     * Method to run when client is subscribed to new channels.
+     * Method to run when broker is being subscribed to new channels.
      *
-     * @param channels the channels IDs.
+     * @param channels the channels name.
      */
     protected void onSubscribe(@NotNull String... channels) {
     }
 
     /**
-     * Method to run when client is unsubscribed to new channels.
+     * Method to run when broker is being unsubscribed from channels.
      *
-     * @param channels the channels IDs.
+     * @param channels the channels name.
      */
     protected void onUnsubscribe(@NotNull String... channels) {
     }
 
     /**
-     * Method to run when byte data is being sent to client.
+     * Method to run when byte data is being sent to broker.
      *
-     * @param channel the channel ID.
+     * @param channel the channel name.
      * @param data    the byte array data to send.
      */
     protected abstract void onSend(@NotNull String channel, byte[] data) throws IOException;
 
     /**
-     * Method to run when byte data was received from client.
+     * Method to run when byte data was received from broker.
      *
-     * @param channel the channel ID.
+     * @param channel the channel name.
      * @param data    the received byte array data.
      */
     protected void onReceive(@NotNull String channel, byte[] data) throws IOException {
     }
 
+    /**
+     * Get the current channel consumer.
+     *
+     * @return a channel consumer that accept a channel name with byte-array data.
+     */
     @NotNull
     public ChannelConsumer<byte[]> getConsumer() {
         return consumer;
     }
 
+    /**
+     * Get the current byte codec.
+     *
+     * @return a byte codec that convert bytes into/from String.
+     */
     @NotNull
     public ByteCodec<String> getCodec() {
         return codec;
     }
 
+    /**
+     * Get the current delayed executor.
+     *
+     * @return a delayed executor.
+     */
     @NotNull
     @SuppressWarnings("unchecked")
     public DelayedExecutor<Object> getExecutor() {
         return (DelayedExecutor<Object>) executor;
     }
 
+    /**
+     * Get the current logger.
+     *
+     * @return a logger that print information about broker operations.
+     */
     @NotNull
     public Logger getLogger() {
         return logger;
@@ -103,7 +118,7 @@ public abstract class Broker {
     /**
      * Get the subscribed channels.
      *
-     * @return a Set of channels IDs.
+     * @return a set of channels names.
      */
     @NotNull
     public Set<String> getSubscribedChannels() {
@@ -111,32 +126,52 @@ public abstract class Broker {
     }
 
     /**
-     * Get the current client status.
+     * Get the current broker status.
      *
-     * @return true if the client is enabled.
+     * @return true if the broker is enabled.
      */
     public boolean isEnabled() {
         return enabled;
     }
 
+    /**
+     * Replace the current channel consumer.
+     *
+     * @param consumer the channel consumer to set.
+     */
     public void setConsumer(@NotNull ChannelConsumer<byte[]> consumer) {
         this.consumer = consumer;
     }
 
+    /**
+     * Replace the current byte codec.
+     *
+     * @param codec the byte codec to set.
+     */
     public void setCodec(@NotNull ByteCodec<String> codec) {
         this.codec = codec;
     }
 
+    /**
+     * Replace the current delayed executor.
+     *
+     * @param executor the delayed executor to set.
+     */
     public void setExecutor(@NotNull DelayedExecutor<?> executor) {
         this.executor = executor;
     }
 
+    /**
+     * Replace the current logger.
+     *
+     * @param logger the logger to set.
+     */
     public void setLogger(@NotNull Logger logger) {
         this.logger = logger;
     }
 
     /**
-     * Set client status.
+     * Set broker status.
      *
      * @param enabled true for enabled, false otherwise.
      */
@@ -145,7 +180,7 @@ public abstract class Broker {
     }
 
     /**
-     * Start the delivery client.
+     * Start the broker connection.
      */
     public void start() {
         close();
@@ -153,7 +188,7 @@ public abstract class Broker {
     }
 
     /**
-     * Stop the delivery client.
+     * Close the broker connection.
      */
     public void close() {
         if (isEnabled()) {
@@ -163,20 +198,21 @@ public abstract class Broker {
     }
 
     /**
-     * Clear all subscribed channels from delivery client.
+     * Clear all subscribed channels from broker.
      */
     public void clear() {
         getSubscribedChannels().clear();
     }
 
     /**
-     * Subscribe client into provided channels IDs.
+     * Subscribe broker into provided channels names.<br>
+     * Any repeated channel will be ignored.
      *
      * @param channels the channels to register.
      * @return         true if any channel was added, false if all the provided channels are already registered.
      */
     public boolean subscribe(@NotNull String... channels) {
-        final List<String> list = new ArrayList<>();
+        final Set<String> list = new HashSet<>();
         for (String channel : channels) {
             if (getSubscribedChannels().add(channel)) {
                 list.add(channel);
@@ -190,13 +226,14 @@ public abstract class Broker {
     }
 
     /**
-     * Unsubscribe client from provided channels IDs.
+     * Unsubscribe broker from provided channels names.<br>
+     * Any repeated channel will be ignored.
      *
      * @param channels the channels to unregister.
      * @return         true if any channel was removed, false if all the provided channels are already unregistered.
      */
     public boolean unsubscribe(@NotNull String... channels) {
-        final List<String> list = new ArrayList<>();
+        final Set<String> list = new HashSet<>();
         for (String channel : channels) {
             if (getSubscribedChannels().remove(channel)) {
                 list.add(channel);
@@ -212,7 +249,7 @@ public abstract class Broker {
     /**
      * Send byte data array to provided channel.
      *
-     * @param channel the channel ID.
+     * @param channel the channel name.
      * @param data    the data to send.
      */
     public void send(@NotNull String channel, byte[] data) throws IOException {
@@ -222,7 +259,7 @@ public abstract class Broker {
     /**
      * Receive byte array from provided channel.
      *
-     * @param channel the channel ID.
+     * @param channel the channel name.
      * @param data    the data to receive.
      */
     public void receive(@NotNull String channel, byte[] data) throws IOException {
@@ -230,10 +267,29 @@ public abstract class Broker {
         onReceive(channel, data);
     }
 
+    /**
+     * Logger interface to print messages about broker operations and exceptions.<br>
+     * Unlike normal logger implementations, this one uses numbers as levels:<br>
+     * 1 = ERROR / SEVERE<br>
+     * 2 = WARNING<br>
+     * 3 = INFO<br>
+     * 4 = DEBUG INFORMATION
+     */
     public interface Logger {
 
+        /**
+         * Boolean to define if DEBUG INFORMATION will be logged by default.<br>
+         * It needs the property {@code saicone.delivery4j.debug} to be set as {@code true}.
+         */
         boolean DEBUG = "true".equals(System.getProperty("saicone.delivery4j.debug"));
 
+        /**
+         * Create a logger to provided class.<br>
+         * This method try to find the best available implementation and uses it.
+         *
+         * @param clazz the class owning the logger.
+         * @return      a newly generated logger instance.
+         */
         @NotNull
         static Logger of(@NotNull Class<?> clazz) {
             try {
@@ -297,14 +353,40 @@ public abstract class Broker {
             };
         }
 
+        /**
+         * Log a message.
+         *
+         * @param level the message level type.
+         * @param msg   the message to log.
+         */
         void log(int level, @NotNull String msg);
 
+        /**
+         * Log a message, with associated Throwable information.
+         *
+         * @param level     the message level type.
+         * @param msg       the message to log.
+         * @param throwable the Throwable associated with log message.
+         */
         void log(int level, @NotNull String msg, @NotNull Throwable throwable);
 
+        /**
+         * Log a message, which is only to be constructed if the logging level is allowed by current implementation.
+         *
+         * @param level the message level type.
+         * @param msg   the message to log.
+         */
         default void log(int level, @NotNull Supplier<String> msg) {
             log(level, msg.get());
         }
 
+        /**
+         * Log a message, which is only to be constructed if the logging level is allowed by current implementation.
+         *
+         * @param level     the message level type.
+         * @param msg       the message to log.
+         * @param throwable the Throwable associated with log message.
+         */
         default void log(int level, @NotNull Supplier<String> msg, @NotNull Throwable throwable) {
             log(level, msg.get(), throwable);
         }

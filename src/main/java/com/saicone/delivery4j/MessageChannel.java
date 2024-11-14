@@ -5,8 +5,6 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -19,6 +17,12 @@ import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * An object to consume channel messages.<br>
+ * This object can also provide an {@link Encryptor} to make a secure message delivery.
+ *
+ * @author Rubenicos
+ */
 public class MessageChannel {
 
     private final String name;
@@ -26,35 +30,83 @@ public class MessageChannel {
     private Cache cache;
     private Encryptor encryptor;
 
+    /**
+     * Create a message channel with provided name.
+     *
+     * @param name the channel name.
+     * @return     a newly generated message channel.
+     */
+    @NotNull
+    public static MessageChannel of(@NotNull String name) {
+        return new MessageChannel(name);
+    }
+
+    /**
+     * Constructs a message channel with provided name.
+     *
+     * @param name the channel name.
+     */
     public MessageChannel(@NotNull String name) {
         this.name = name;
     }
 
+    /**
+     * Constructs a message channel with provided name and consumer.
+     *
+     * @param name     the channel name.
+     * @param consumer the consumer that accept multi-line messages.
+     */
     public MessageChannel(@NotNull String name, @Nullable ChannelConsumer<String[]> consumer) {
         this.name = name;
         this.consumer = consumer;
     }
 
+    /**
+     * Get the current channel name.
+     *
+     * @return a channel name.
+     */
     @NotNull
     public String getName() {
         return name;
     }
 
+    /**
+     * Get the current message consumer.
+     *
+     * @return a channel consumer that accept multi-line messages.
+     */
     @Nullable
     public ChannelConsumer<String[]> getConsumer() {
         return consumer;
     }
 
+    /**
+     * Get the current cache instance.
+     *
+     * @return a message ID cache if exists, null otherwise.
+     */
     @Nullable
     public Cache getCache() {
         return cache;
     }
 
+    /**
+     * Get the current encryptor.
+     *
+     * @return a message encryptor if exists, null otherwise.
+     */
     @Nullable
     public Encryptor getEncryptor() {
         return encryptor;
     }
 
+    /**
+     * Set or append provided consumer into channel inbound consumer.
+     *
+     * @param consumer the consumer that accept multi-line messages.
+     * @return         the current message channel.
+     */
     @NotNull
     @Contract("_ -> this")
     public MessageChannel consume(@NotNull ChannelConsumer<String[]> consumer) {
@@ -66,6 +118,12 @@ public class MessageChannel {
         return this;
     }
 
+    /**
+     * Set or append before provided consumer into channel inbound consumer.
+     *
+     * @param consumer the consumer that accept multi-line messages.
+     * @return         the current message channel.
+     */
     @NotNull
     @Contract("_ -> this")
     public MessageChannel consumeBefore(@NotNull ChannelConsumer<String[]> consumer) {
@@ -77,6 +135,12 @@ public class MessageChannel {
         return this;
     }
 
+    /**
+     * Set caching status for the current message channel.
+     *
+     * @param enable true to use default cache parameters, false to remove any cache instance.
+     * @return       the current message channel.
+     */
     @NotNull
     @Contract("_ -> this")
     public MessageChannel cache(boolean enable) {
@@ -87,12 +151,25 @@ public class MessageChannel {
         }
     }
 
+    /**
+     * Set the cache time for the current message channel.
+     *
+     * @param duration the time to wait until any message ID will be deleted.
+     * @param unit     the unit for the provided time.
+     * @return         the current message channel.
+     */
     @NotNull
     @Contract("_, _ -> this")
     public MessageChannel cache(long duration, @NotNull TimeUnit unit) {
         return cache(Cache.of(duration, unit));
     }
 
+    /**
+     * Set the cache instance for the current message channel.
+     *
+     * @param cache the message ID cache.
+     * @return      the current message channel.
+     */
     @NotNull
     @Contract("_ -> this")
     public MessageChannel cache(@Nullable Cache cache) {
@@ -100,6 +177,12 @@ public class MessageChannel {
         return this;
     }
 
+    /**
+     * Set the message encryptor for the current message channel.
+     *
+     * @param encryptor the message encryptor.
+     * @return          the current message channel.
+     */
     @NotNull
     @Contract("_ -> this")
     public MessageChannel encryptor(@Nullable Encryptor encryptor) {
@@ -107,6 +190,12 @@ public class MessageChannel {
         return this;
     }
 
+    /**
+     * Encodes the specified message lines into byte array.
+     *
+     * @param lines message to encode.
+     * @return      a byte array that represent the message.
+     */
     public byte[] encode(@Nullable Object... lines) throws IOException {
         try (ByteArrayOutputStream arrayOut = new ByteArrayOutputStream(); DataOutputStream out = new DataOutputStream(arrayOut)) {
             if (this.cache != null) {
@@ -124,14 +213,20 @@ public class MessageChannel {
                         out.writeInt(bytes.length);
                         out.write(bytes);
                     }
-                } catch (IllegalBlockSizeException | BadPaddingException e) {
-                    throw new IOException("Cannot encrypt message into channel " + this.name, e);
+                } catch (Throwable t) {
+                    throw new IOException("Cannot encrypt message into channel " + this.name, t);
                 }
             }
             return arrayOut.toByteArray();
         }
     }
 
+    /**
+     * Decodes a byte array into a multi-line message.
+     *
+     * @param src the byte array to decode.
+     * @return    a message from byte array.
+     */
     @Nullable
     public String[] decode(byte[] src) throws IOException {
         try (DataInputStream in = new DataInputStream(new ByteArrayInputStream(src))) {
@@ -151,8 +246,8 @@ public class MessageChannel {
                             final String message = this.encryptor.decrypt(in.readNBytes(in.readInt()));
                             lines[i] = message.equalsIgnoreCase("null") ? null : message;
                         }
-                    } catch (IllegalBlockSizeException | BadPaddingException e) {
-                        throw new IOException("Cannot decrypt message from channel " + this.name, e);
+                    } catch (Throwable t) {
+                        throw new IOException("Cannot decrypt message from channel " + this.name, t);
                     }
                 }
             } catch (EOFException ignored) { }
@@ -160,6 +255,13 @@ public class MessageChannel {
         }
     }
 
+    /**
+     * Accept the provided pre-decoded data into current consumer.
+     *
+     * @param src the byte array to decode.
+     * @return    true if the data was processed correctly, false otherwise.
+     * @throws IOException if any error occurs in this operation.
+     */
     public boolean accept(byte[] src) throws IOException {
         final String[] lines = decode(src);
         if (lines == null) {
@@ -171,10 +273,18 @@ public class MessageChannel {
         return true;
     }
 
+    /**
+     * Clear the current message channel instance.
+     */
     public void clear() {
-        this.cache.clear();
+        if (this.cache != null) {
+            this.cache.clear();
+        }
     }
 
+    /**
+     * Cache interface to store message IDs with certain delay.
+     */
     public static abstract class Cache {
 
         @NotNull
@@ -221,16 +331,35 @@ public class MessageChannel {
             };
         }
 
+        /**
+         * Save message ID.
+         *
+         * @param id the ID of the message to save.
+         */
         protected abstract void save(int id);
 
+        /**
+         * Check if the current cache contains the provided message ID.
+         *
+         * @param id the ID of the message.
+         * @return   true if the message is already saved, false otherwise.
+         */
         public abstract boolean contains(int id);
 
+        /**
+         * Generate message ID and save into cache.
+         *
+         * @return a message ID.
+         */
         public int generate() {
             final int id = ThreadLocalRandom.current().nextInt(0, 999999 + 1);
             save(id);
             return id;
         }
 
+        /**
+         * Clear the current cache instance values.
+         */
         public abstract void clear();
     }
 }

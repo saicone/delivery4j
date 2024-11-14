@@ -74,10 +74,25 @@ tasks.register('allJavadoc', Javadoc) {
     source javadocProjects.collect { project(it).sourceSets.main.allJava }
     classpath = files(javadocProjects.collect { project(it).sourceSets.main.compileClasspath })
     options {
+        // Java
         links 'https://docs.oracle.com/en/java/javase/11/docs/api/'
+
+        // Broker
+        links 'https://javadoc.io/doc/org.apache.activemq/activemq-client/latest/'
+        links 'https://javadoc.io/doc/org.apache.kafka/kafka-clients/latest/'
+        links 'https://javadoc.io/doc/io.nats/jnats/latest/'
+        links 'https://javadoc.io/doc/org.postgresql/postgresql/latest/'
         links 'https://rabbitmq.github.io/rabbitmq-java-client/api/current/'
         links 'https://javadoc.io/doc/redis.clients/jedis/latest/'
         links 'https://javadoc.io/doc/com.zaxxer/HikariCP/latest/'
+
+        // Extension
+        links 'https://javadoc.io/doc/com.github.ben-manes.caffeine/caffeine/latest/'
+        links 'https://javadoc.io/doc/com.google.guava/guava/latest/'
+        links 'https://logging.apache.org/log4j/2.x/javadoc/log4j-api/'
+        links 'https://slf4j.org/api/'
+
+        // Common
         links 'https://javadoc.io/doc/org.jetbrains/annotations/latest/'
     }
     destinationDir = file(project.layout.buildDirectory.dir('docs/all-javadoc'))
