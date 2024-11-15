@@ -220,7 +220,6 @@ public class RabbitMQBroker extends Broker {
             close(this.cChannel, this.connection);
             this.cChannel = null;
             this.reconnected = true;
-            setEnabled(false);
             getLogger().log(2, () -> "RabbitMQ connection dropped, automatic reconnection every " + this.checkTime + " " + this.checkUnit.name().toLowerCase() + "...");
             onStart();
         }
@@ -233,8 +232,6 @@ public class RabbitMQBroker extends Broker {
                     closeable.close();
                 }
             }
-        } catch (Throwable t) {
-            getLogger().log(2, "Cannot close RabbitMQ connection", t);
-        }
+        } catch (Throwable ignored) { }
     }
 }
