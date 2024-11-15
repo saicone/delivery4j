@@ -217,7 +217,7 @@ public class RabbitMQBroker extends Broker {
             return;
         }
         if (!this.connection.isOpen() || this.cChannel == null || !this.cChannel.isOpen()) {
-            close(this.cChannel, this.connection);
+            close(this.cChannel);
             this.cChannel = null;
             this.reconnected = true;
             getLogger().log(2, () -> "RabbitMQ connection dropped, automatic reconnection every " + this.checkTime + " " + this.checkUnit.name().toLowerCase() + "...");
