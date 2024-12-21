@@ -1,6 +1,6 @@
 <h1 align="center">Delivery4j</h1>
 
-<h4 align="center">Java library wrapper for multiple data delivery concepts.</h4>
+<h4 align="center">Java library facade for multiple data delivery concepts.</h4>
 
 <p align="center">
     <a href="https://saic.one/discord">
@@ -34,6 +34,7 @@ Currently supporting the brokers:
 * [RabbitMQ](https://github.com/rabbitmq/rabbitmq-java-client) using queue and consumer via exchange.
 * [Redis](https://github.com/redis/jedis) using publish and subscribe (also compatible with [KeyDB](https://github.com/Snapchat/KeyDB)).
 * SQL polling (not a real broker, but can be used as one).
+* [Valkey](https://github.com/valkey-io/valkey-java) using a copy-paste from redis broker (since valkey java client is a jedis fork).
 
 PostgreSQL and SQL are also compatible with [Hikari](https://github.com/brettwooldridge/HikariCP).
 
@@ -51,6 +52,7 @@ Delivery4j contains the following artifacts:
 * `broker-redis` - Redis broker.
 * `broker-sql` - SQL broker using plain Java connections.
 * `broker-sql-hikari` - SQL broker using Hikari library.
+* `broker-valkey` - Valkey broker.
 * `extension-caffeine` - Extension to detect and use Caffeine cache on MessageChannel.
 * `extension-guava` - Extension to detect and use Guava cache on MessageChannel.
 * `extension-log4j` - Extension to detect and use log4j logger on Broker instance.

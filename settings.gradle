@@ -10,7 +10,8 @@ include(
 	'broker:broker-rabbitmq',
 	'broker:broker-redis',
 	'broker:broker-sql',
-	'broker:broker-sql-hikari'
+	'broker:broker-sql-hikari',
+	'broker:broker-valkey'
 )
 
 // Modules
