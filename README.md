@@ -47,11 +47,13 @@ Delivery4j contains the following artifacts:
 * `broker-kafka` - Kafka broker.
 * `broker-nats` - NATS broker.
 * `broker-postgresql` - PostgreSQL broker using plain Java connections.
-* `broker-postgresql-hikari` - PostgreSQL broker using Hikari library (For Java 8 use `java8` classifier).
+* `broker-postgresql-hikari` - PostgreSQL broker using Hikari library.
+* `broker-postgresql-hikari-java8` - PostgreSQL broker using Hikari 4.x (for Java 8).
 * `broker-rabbitmq` - RabbitMQ broker.
 * `broker-redis` - Redis broker.
 * `broker-sql` - SQL broker using plain Java connections.
-* `broker-sql-hikari` - SQL broker using Hikari library (For Java 8 use `java8` classifier).
+* `broker-sql-hikari` - SQL broker using Hikari library.
+* `broker-sql-hikari-java8` - SQL broker using Hikari 4.x (for Java 8).
 * `broker-valkey` - Valkey broker.
 * `extension-caffeine` - Extension to detect and use Caffeine cache on MessageChannel.
 * `extension-guava` - Extension to detect and use Guava cache on MessageChannel.

@@ -6,24 +6,15 @@ dependencies {
 publishing {
     publications {
         mavenJava8(MavenPublication) {
-            groupId = project.group
-            artifactId = project.name
-            version = project.version
-
-            artifact(jar) {
-                classifier = "java8"
-            }
-            artifact(sourcesJar) {
-                classifier = "sources"
-            }
-            artifact(javadocJar) {
-                classifier = "javadoc"
-            }
+            groupId project.group
+            artifactId project.name + '-java8'
+            version project.version
+            from components.java
 
             pom.withXml {
                 def root = asNode()
-                def dependenciesNode = root.get("dependencies")?.getAt(0)
 
+                def dependenciesNode = root.get("dependencies")?.getAt(0)
                 if (dependenciesNode) {
                     dependenciesNode.children().removeIf { dep ->
                         dep.groupId.text() == "com.zaxxer" && dep.artifactId.text() == "HikariCP"
