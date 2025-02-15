@@ -111,7 +111,7 @@ public class RedisBroker extends Broker {
     @NotNull
     private Supplier<String> password(@NotNull String password) {
         return () -> {
-            var stack = Thread.currentThread().getStackTrace();
+            final StackTraceElement[] stack = Thread.currentThread().getStackTrace();
             for (int i = 2; i < stack.length; i++) {
                 if (stack[i].getClassName().equals(RedisBroker.class.getName())) {
                     return password;

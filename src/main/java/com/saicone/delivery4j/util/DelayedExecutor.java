@@ -20,7 +20,7 @@ public interface DelayedExecutor<T> {
      * Is NOT suggested to use this object due is not scalable and doesn't
      * use any thread pool, make a better implementation instead.
      */
-    DelayedExecutor<Thread> JAVA = new DelayedExecutor<>() {
+    DelayedExecutor<Thread> JAVA = new DelayedExecutor<Thread>() {
         @Override
         public @NotNull Thread execute(@NotNull Runnable command) {
             final Thread thread = new Thread(command);

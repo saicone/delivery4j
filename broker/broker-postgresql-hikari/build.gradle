@@ -2,3 +2,41 @@ dependencies {
     api project(':broker:broker-postgresql')
     api 'com.zaxxer:HikariCP:6.2.1'
 }
+
+publishing {
+    publications {
+        mavenJava8(MavenPublication) {
+            groupId = project.group
+            artifactId = project.name
+            version = project.version
+
+            artifact(jar) {
+                classifier = "java8"
+            }
+            artifact(sourcesJar) {
+                classifier = "sources"
+            }
+            artifact(javadocJar) {
+                classifier = "javadoc"
+            }
+
+            pom.withXml {
+                def root = asNode()
+                def dependenciesNode = root.get("dependencies")?.getAt(0)
+
+                if (dependenciesNode) {
+                    dependenciesNode.children().removeIf { dep ->
+                        dep.groupId.text() == "com.zaxxer" && dep.artifactId.text() == "HikariCP"
+                    }
+                } else {
+                    dependenciesNode = root.appendNode("dependencies")
+                }
+
+                def dependencyNode = dependenciesNode.appendNode("dependency")
+                dependencyNode.appendNode("groupId", "com.zaxxer")
+                dependencyNode.appendNode("artifactId", "HikariCP")
+                dependencyNode.appendNode("version", "4.0.3")
+            }
+        }
+    }
+}

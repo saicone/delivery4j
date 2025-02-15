@@ -16,7 +16,7 @@ public interface ByteCodec<T> {
     /**
      * Base64 byte codec that convert bytes into/from Base64 String.
      */
-    ByteCodec<String> BASE64 = new ByteCodec<>() {
+    ByteCodec<String> BASE64 = new ByteCodec<String>() {
         @Override
         public @NotNull String encode(byte[] src) {
             return Base64.getEncoder().encodeToString(src);
