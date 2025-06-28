@@ -69,7 +69,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.saicone.delivery4j:delivery4j:VERSION'
+    implementation 'com.saicone.delivery4j:delivery4j:1.1.2'
 }
 ```
 
@@ -84,7 +84,7 @@ repositories {
 }
 
 dependencies {
-    implementation("com.saicone.delivery4j:delivery4j:VERSION")
+    implementation("com.saicone.delivery4j:delivery4j:1.1.2")
 }
 ```
 
@@ -105,7 +105,7 @@ dependencies {
     <dependency>
         <groupId>com.saicone.delivery4j</groupId>
         <artifactId>delivery4j</artifactId>
-        <version>VERSION</version>
+        <version>1.1.2</version>
         <scope>compile</scope>
     </dependency>
 </dependencies>
