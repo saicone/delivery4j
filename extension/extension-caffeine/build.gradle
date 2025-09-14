@@ -1,3 +1,4 @@
 dependencies {
+    // Using 2.x for Java 8 compatibility
     compileOnly 'com.github.ben-manes.caffeine:caffeine:2.9.3'
 }
