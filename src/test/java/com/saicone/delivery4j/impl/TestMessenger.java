@@ -3,15 +3,15 @@ package com.saicone.delivery4j.impl;
 import com.saicone.delivery4j.AbstractMessenger;
 import com.saicone.delivery4j.Broker;
 import com.saicone.delivery4j.broker.TestBroker;
-import com.saicone.delivery4j.util.DelayedExecutor;
+import com.saicone.delivery4j.util.TaskExecutor;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.TimeUnit;
 
-public class TestMessenger extends AbstractMessenger implements DelayedExecutor<Void> {
+public class TestMessenger extends AbstractMessenger implements TaskExecutor<Void> {
 
     public TestMessenger() {
-        setExecutor(this.asExecutor());
+        setExecutor(this.executor());
     }
 
     @Override

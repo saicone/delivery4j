@@ -1,7 +1,7 @@
 package com.saicone.delivery4j;
 
 import com.saicone.delivery4j.util.ByteCodec;
-import com.saicone.delivery4j.util.DelayedExecutor;
+import com.saicone.delivery4j.util.TaskExecutor;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -23,7 +23,7 @@ public abstract class Broker {
 
     private ChannelConsumer<byte[]> consumer = (channel, data) -> {};
     private ByteCodec<String> codec = ByteCodec.BASE64;
-    private DelayedExecutor<?> executor = DelayedExecutor.JAVA;
+    private TaskExecutor<?> executor = TaskExecutor.JAVA;
     private Logger logger = Logger.of(this.getClass());
 
     private final Set<String> subscribedChannels = new HashSet<>();
@@ -103,8 +103,8 @@ public abstract class Broker {
      */
     @NotNull
     @SuppressWarnings("unchecked")
-    public DelayedExecutor<Object> getExecutor() {
-        return (DelayedExecutor<Object>) executor;
+    public TaskExecutor<Object> getExecutor() {
+        return (TaskExecutor<Object>) executor;
     }
 
     /**
@@ -159,7 +159,7 @@ public abstract class Broker {
      *
      * @param executor the delayed executor to set.
      */
-    public void setExecutor(@NotNull DelayedExecutor<?> executor) {
+    public void setExecutor(@NotNull TaskExecutor<?> executor) {
         this.executor = executor;
     }
 

@@ -1,7 +1,32 @@
+/*
+ * This file is part of gama, licensed under the MIT License
+ *
+ * Copyright (c) 2025 Rubenicos
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 package com.saicone.delivery4j.util;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
@@ -13,14 +38,14 @@ import java.util.concurrent.TimeUnit;
  *
  * @param <T> the cancellable object type.
  */
-public interface DelayedExecutor<T> {
+public interface TaskExecutor<T> extends Closeable {
 
     /**
-     * Delayed executor object that use Java method to execute tasks.<br>
+     * Task executor object that use Java methods to execute tasks.<br>
      * Is NOT suggested to use this object due is not scalable and doesn't
      * use any thread pool, make a better implementation instead.
      */
-    DelayedExecutor<Thread> JAVA = new DelayedExecutor<Thread>() {
+    TaskExecutor<Thread> JAVA = new TaskExecutor<Thread>() {
         @Override
         public @NotNull Thread execute(@NotNull Runnable command) {
             final Thread thread = new Thread(command);
@@ -117,13 +142,18 @@ public interface DelayedExecutor<T> {
      */
     void cancel(@NotNull T t);
 
+    @Override
+    default void close() throws IOException {
+        // empty default method
+    }
+
     /**
      * Return the current executor as Java {@link Executor}.
      *
      * @return an {@link Executor} that represent the current object.
      */
     @NotNull
-    default Executor asExecutor() {
+    default Executor executor() {
         return this::execute;
     }
 }

@@ -1,7 +1,7 @@
 package com.saicone.delivery4j;
 
 import com.saicone.delivery4j.util.ByteCodec;
-import com.saicone.delivery4j.util.DelayedExecutor;
+import com.saicone.delivery4j.util.TaskExecutor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -123,8 +123,8 @@ public abstract class AbstractMessenger {
                 broker.setCodec((ByteCodec<String>) this);
             } catch (Throwable ignored) { }
         }
-        if (this instanceof DelayedExecutor) {
-            broker.setExecutor((DelayedExecutor<?>) this);
+        if (this instanceof TaskExecutor) {
+            broker.setExecutor((TaskExecutor<?>) this);
         }
         if (this instanceof Broker.Logger) {
             broker.setLogger((Broker.Logger) this);
