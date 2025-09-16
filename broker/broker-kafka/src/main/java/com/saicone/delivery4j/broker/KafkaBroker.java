@@ -93,7 +93,9 @@ public class KafkaBroker<K> extends Broker {
     @Override
     protected void onStart() {
         try {
-            this.consumer.subscribe(getSubscribedChannels());
+            if (!getSubscribedChannels().isEmpty()) {
+                this.consumer.subscribe(getSubscribedChannels());
+            }
             setEnabled(true);
         } catch (Throwable t) {
             getLogger().log(1, "Cannot subscribe Kafka consumer to channels", t);
@@ -123,7 +125,9 @@ public class KafkaBroker<K> extends Broker {
         try {
             this.consumer.unsubscribe();
         } catch (Throwable ignored) { }
-        this.consumer.subscribe(getSubscribedChannels());
+        if (!getSubscribedChannels().isEmpty()) {
+            this.consumer.subscribe(getSubscribedChannels());
+        }
     }
 
     @Override
@@ -131,7 +135,9 @@ public class KafkaBroker<K> extends Broker {
         try {
             this.consumer.unsubscribe();
         } catch (Throwable ignored) { }
-        this.consumer.subscribe(getSubscribedChannels());
+        if (!getSubscribedChannels().isEmpty()) {
+            this.consumer.subscribe(getSubscribedChannels());
+        }
     }
 
     @Override

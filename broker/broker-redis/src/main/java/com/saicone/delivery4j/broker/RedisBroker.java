@@ -126,7 +126,7 @@ public class RedisBroker extends Broker {
     protected void onStart() {
         setEnabled(true);
         // Jedis connection is a blocking operation.
-        // So new thread is needed to not block the main thread
+        // So new thread is needed to not block the current thread
         this.aliveTask = getExecutor().execute(this::alive);
     }
 
@@ -218,6 +218,9 @@ public class RedisBroker extends Broker {
 
     @SuppressWarnings("all")
     private void alive() {
+        if (getSubscribedChannels().isEmpty()) {
+            return;
+        }
         boolean reconnected = false;
         while (isEnabled() && !Thread.interrupted() && this.pool != null && !this.pool.isClosed()) {
             try (Jedis jedis = this.pool.getResource()) {
