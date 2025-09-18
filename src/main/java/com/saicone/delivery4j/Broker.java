@@ -27,7 +27,7 @@ public abstract class Broker {
     private Logger logger = Logger.of(this.getClass());
 
     private final Set<String> subscribedChannels = new HashSet<>();
-    private boolean enabled = false;
+    private volatile boolean enabled = false;
 
     /**
      * Method to run when broker starts
