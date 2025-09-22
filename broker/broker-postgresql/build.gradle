@@ -1,4 +1,4 @@
 dependencies {
     api project(':module:module-sql')
-    api 'org.postgresql:postgresql:42.7.7'
+    api 'org.postgresql:postgresql:42.7.8'
 }
