@@ -6,3 +6,4 @@ updates:
       interval: "weekly"
     ignore:
       - dependency-name: "com.github.ben-manes.caffeine:caffeine"
+      - dependency-name: "org.junit:junit-bom"
