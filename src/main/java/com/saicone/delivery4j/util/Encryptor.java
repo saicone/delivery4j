@@ -1,10 +1,14 @@
 package com.saicone.delivery4j.util;
 
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
 import javax.crypto.Cipher;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
+import java.io.DataInputStream;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
@@ -17,6 +21,67 @@ import java.security.NoSuchAlgorithmException;
  * @author Rubenicos
  */
 public interface Encryptor {
+
+    /**
+     * Empty encryptor instance.
+     */
+    @ApiStatus.Internal
+    Encryptor EMPTY = new Encryptor() {
+        @Override
+        public byte[] encrypt(@NotNull String input) {
+            return input.getBytes(StandardCharsets.UTF_8);
+        }
+
+        @Override
+        public @NotNull String decrypt(byte[] input) {
+            return new String(input, StandardCharsets.UTF_8);
+        }
+
+        @Override
+        public void write(@NotNull DataOutput out, @NotNull String input) throws IOException {
+            out.writeUTF(input);
+        }
+
+        @Override
+        public @NotNull String read(@NotNull DataInputStream in) throws IOException {
+            return in.readUTF();
+        }
+    };
+
+    /**
+     * Get an empty encryptor that does not perform any encryption/decryption.<br>
+     * This instance also writes and reads data using DataOutput/DataInput UTF methods.
+     *
+     * @return an empty encryptor instance.
+     */
+    @NotNull
+    static Encryptor empty() {
+        return EMPTY;
+    }
+
+    /**
+     * Get an empty encryptor that does not perform any encryption/decryption.
+     *
+     * @param charset the charset to be used to decode data into String.
+     * @return        an empty encryptor instance.
+     */
+    @NotNull
+    static Encryptor empty(@NotNull Charset charset) {
+        if (charset == StandardCharsets.UTF_8) {
+            return EMPTY;
+        }
+        return new Encryptor() {
+            @Override
+            public byte[] encrypt(@NotNull String input) {
+                return input.getBytes(charset);
+            }
+
+            @Override
+            public @NotNull String decrypt(byte[] input) {
+                return new String(input, charset);
+            }
+        };
+    }
 
     /**
      * Create an encryptor with provided arguments that performs automatic resets if any error occurs on encryption/decryption.
@@ -127,4 +192,29 @@ public interface Encryptor {
      */
     @NotNull
     String decrypt(byte[] input);
+
+    /**
+     * Encrypts and writes the input String into the provided DataOutput.
+     *
+     * @param out   the DataOutput to write into.
+     * @param input the String to encrypt and write.
+     * @throws IOException if an I/O error occurs.
+     */
+    default void write(@NotNull DataOutput out, @NotNull String input) throws IOException {
+        final byte[] bytes = this.encrypt(input);
+        out.writeInt(bytes.length);
+        out.write(bytes);
+    }
+
+    /**
+     * Reads and decrypts a String from the provided DataInputStream.
+     *
+     * @param in the DataInputStream to read from.
+     * @return   a decrypted String.
+     * @throws IOException if an I/O error occurs.
+     */
+    @NotNull
+    default String read(@NotNull DataInputStream in) throws IOException {
+        return this.decrypt(in.readNBytes(in.readInt()));
+    }
 }

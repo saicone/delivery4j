@@ -28,7 +28,7 @@ public class MessageChannel {
     private final String name;
     private ChannelConsumer<String[]> consumer;
     private Cache cache;
-    private Encryptor encryptor;
+    private Encryptor encryptor = Encryptor.empty();
 
     /**
      * Create a message channel with provided name.
@@ -185,7 +185,7 @@ public class MessageChannel {
      */
     @NotNull
     @Contract("_ -> this")
-    public MessageChannel encryptor(@Nullable Encryptor encryptor) {
+    public MessageChannel encryptor(@NotNull Encryptor encryptor) {
         this.encryptor = encryptor;
         return this;
     }
@@ -203,20 +203,8 @@ public class MessageChannel {
                 out.writeInt(this.cache.generate());
             }
             out.writeInt(lines.length);
-            if (this.encryptor == null) {
-                for (Object message : lines) {
-                    out.writeUTF(Objects.toString(message));
-                }
-            } else {
-                try {
-                    for (Object message : lines) {
-                        final byte[] bytes = this.encryptor.encrypt(Objects.toString(message));
-                        out.writeInt(bytes.length);
-                        out.write(bytes);
-                    }
-                } catch (Throwable t) {
-                    throw new IOException("Cannot encrypt message into channel " + this.name, t);
-                }
+            for (Object message : lines) {
+                this.encryptor.write(out, Objects.toString(message));
             }
             return arrayOut.toByteArray();
         }
@@ -237,20 +225,9 @@ public class MessageChannel {
             }
             final String[] lines = new String[in.readInt()];
             try {
-                if (this.encryptor == null) {
-                    for (int i = 0; i < lines.length; i++) {
-                        final String message = in.readUTF();
-                        lines[i] = message.equalsIgnoreCase("null") ? null : message;
-                    }
-                } else {
-                    try {
-                        for (int i = 0; i < lines.length; i++) {
-                            final String message = this.encryptor.decrypt(in.readNBytes(in.readInt()));
-                            lines[i] = message.equalsIgnoreCase("null") ? null : message;
-                        }
-                    } catch (Throwable t) {
-                        throw new IOException("Cannot decrypt message from channel " + this.name, t);
-                    }
+                for (int i = 0; i < lines.length; i++) {
+                    final String message = this.encryptor.read(in);
+                    lines[i] = message.equalsIgnoreCase("null") ? null : message;
                 }
             } catch (EOFException ignored) { }
             return lines;
