@@ -6,7 +6,7 @@ import org.jetbrains.annotations.NotNull;
 import javax.crypto.Cipher;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
-import java.io.DataInputStream;
+import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -43,7 +43,7 @@ public interface Encryptor {
         }
 
         @Override
-        public @NotNull String read(@NotNull DataInputStream in) throws IOException {
+        public @NotNull String read(@NotNull DataInput in) throws IOException {
             return in.readUTF();
         }
     };
@@ -207,14 +207,17 @@ public interface Encryptor {
     }
 
     /**
-     * Reads and decrypts a String from the provided DataInputStream.
+     * Reads and decrypts a String from the provided DataInput.
      *
-     * @param in the DataInputStream to read from.
+     * @param in the DataInput to read from.
      * @return   a decrypted String.
      * @throws IOException if an I/O error occurs.
      */
     @NotNull
-    default String read(@NotNull DataInputStream in) throws IOException {
-        return this.decrypt(in.readNBytes(in.readInt()));
+    default String read(@NotNull DataInput in) throws IOException {
+        final int length = in.readInt();
+        final byte[] bytes = new byte[length];
+        in.readFully(bytes);
+        return this.decrypt(bytes);
     }
 }
