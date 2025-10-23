@@ -10,7 +10,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 
@@ -28,22 +27,22 @@ public interface Encryptor {
     @ApiStatus.Internal
     Encryptor EMPTY = new Encryptor() {
         @Override
-        public byte[] encrypt(@NotNull String input) {
-            return input.getBytes(StandardCharsets.UTF_8);
+        public byte[] encrypt(byte[] input) {
+            return input;
         }
 
         @Override
-        public @NotNull String decrypt(byte[] input) {
-            return new String(input, StandardCharsets.UTF_8);
+        public byte[] decrypt(byte[] input) {
+            return input;
         }
 
         @Override
-        public void write(@NotNull DataOutput out, @NotNull String input) throws IOException {
+        public void writeUTF(@NotNull DataOutput out, @NotNull String input) throws IOException {
             out.writeUTF(input);
         }
 
         @Override
-        public @NotNull String read(@NotNull DataInput in) throws IOException {
+        public @NotNull String readUTF(@NotNull DataInput in) throws IOException {
             return in.readUTF();
         }
     };
@@ -60,56 +59,17 @@ public interface Encryptor {
     }
 
     /**
-     * Get an empty encryptor that does not perform any encryption/decryption.
-     *
-     * @param charset the charset to be used to decode data into String.
-     * @return        an empty encryptor instance.
-     */
-    @NotNull
-    static Encryptor empty(@NotNull Charset charset) {
-        if (charset == StandardCharsets.UTF_8) {
-            return EMPTY;
-        }
-        return new Encryptor() {
-            @Override
-            public byte[] encrypt(@NotNull String input) {
-                return input.getBytes(charset);
-            }
-
-            @Override
-            public @NotNull String decrypt(byte[] input) {
-                return new String(input, charset);
-            }
-        };
-    }
-
-    /**
      * Create an encryptor with provided arguments that performs automatic resets if any error occurs on encryption/decryption.
      *
-     * @param key            the key.
-     * @return               an encryptor instance.
+     * @param key the key.
+     * @return    an encryptor instance.
      * @throws NoSuchPaddingException if {@code transformation} contains a padding scheme that is not available.
      * @throws NoSuchAlgorithmException if {@code transformation} is {@code null}, empty, in an invalid format, or if no {@code Provider} supports a {@code CipherSpi} implementation for the specified algorithm.
      * @throws InvalidKeyException if the given key is inappropriate for cipher instances.
      */
     @NotNull
     static Encryptor of(@NotNull SecretKey key) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
-        return of("AES", key, StandardCharsets.UTF_8);
-    }
-
-    /**
-     * Create an encryptor with provided arguments that performs automatic resets if any error occurs on encryption/decryption.
-     *
-     * @param key            the key.
-     * @param charset        the charset to be used to decode data into String.
-     * @return               an encryptor instance.
-     * @throws NoSuchPaddingException if {@code transformation} contains a padding scheme that is not available.
-     * @throws NoSuchAlgorithmException if {@code transformation} is {@code null}, empty, in an invalid format, or if no {@code Provider} supports a {@code CipherSpi} implementation for the specified algorithm.
-     * @throws InvalidKeyException if the given key is inappropriate for cipher instances.
-     */
-    @NotNull
-    static Encryptor of(@NotNull SecretKey key, @NotNull Charset charset) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
-        return of("AES", key, charset);
+        return of("AES", key);
     }
 
     /**
@@ -124,22 +84,6 @@ public interface Encryptor {
      */
     @NotNull
     static Encryptor of(@NotNull String transformation, @NotNull SecretKey key) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
-        return of(transformation, key, StandardCharsets.UTF_8);
-    }
-
-    /**
-     * Create an encryptor with provided arguments that performs automatic resets if any error occurs on encryption/decryption.
-     *
-     * @param transformation the name of the transformation.
-     * @param key            the key.
-     * @param charset        the charset to be used to decode data into String.
-     * @return               an encryptor instance.
-     * @throws NoSuchPaddingException if {@code transformation} contains a padding scheme that is not available.
-     * @throws NoSuchAlgorithmException if {@code transformation} is {@code null}, empty, in an invalid format, or if no {@code Provider} supports a {@code CipherSpi} implementation for the specified algorithm.
-     * @throws InvalidKeyException if the given key is inappropriate for cipher instances.
-     */
-    @NotNull
-    static Encryptor of(@NotNull String transformation, @NotNull SecretKey key, @NotNull Charset charset) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         final Cipher encryptMode = Cipher.getInstance(transformation);
         encryptMode.init(Cipher.ENCRYPT_MODE, key);
         final Cipher decryptMode = Cipher.getInstance(transformation);
@@ -149,9 +93,9 @@ public interface Encryptor {
             private Cipher decrypt = decryptMode;
 
             @Override
-            public byte[] encrypt(@NotNull String input) {
+            public byte[] encrypt(byte[] input) {
                 try {
-                    return encrypt.doFinal(input.getBytes(charset));
+                    return encrypt.doFinal(input);
                 } catch (Throwable t) {
                     try {
                         encrypt = Cipher.getInstance(transformation);
@@ -162,9 +106,9 @@ public interface Encryptor {
             }
 
             @Override
-            public @NotNull String decrypt(byte[] input) {
+            public byte[] decrypt(byte[] input) {
                 try {
-                    return new String(decrypt.doFinal(input), charset);
+                    return decrypt.doFinal(input);
                 } catch (Throwable t) {
                     try {
                         decrypt = Cipher.getInstance(transformation);
@@ -177,12 +121,41 @@ public interface Encryptor {
     }
 
     /**
+     * Encrypts the input data.
+     *
+     * @param input the byte array to encrypt.
+     * @return      an encrypted byte array.
+     */
+    byte[] encrypt(byte[] input);
+
+    /**
      * Encrypts the input String data and return itself as byte array.
      *
      * @param input the String to encrypt.
      * @return      an encrypted String data.
      */
-    byte[] encrypt(@NotNull String input);
+    default byte[] encryptUTF(@NotNull String input) {
+        return encryptUTF(input, Charset.defaultCharset());
+    }
+
+    /**
+     * Encrypts the input String data and return itself as byte array.
+     *
+     * @param input   the String to encrypt.
+     * @param charset the Charset to encode the String.
+     * @return        an encrypted String data.
+     */
+    default byte[] encryptUTF(@NotNull String input, @NotNull Charset charset) {
+        return encrypt(input.getBytes(charset));
+    }
+
+    /**
+     * Decrypts the input data.
+     *
+     * @param input the byte array to decrypt.
+     * @return      a decrypted byte array.
+     */
+    byte[] decrypt(byte[] input);
 
     /**
      * Decrypts the input data and return itself as readable String.
@@ -191,7 +164,21 @@ public interface Encryptor {
      * @return      a decrypted String.
      */
     @NotNull
-    String decrypt(byte[] input);
+    default String decryptUTF(byte[] input) {
+        return decryptUTF(input, Charset.defaultCharset());
+    }
+
+    /**
+     * Decrypts the input data and return itself as readable String.
+     *
+     * @param input   the byte array to decrypt.
+     * @param charset the Charset to decode the String.
+     * @return        a decrypted String.
+     */
+    @NotNull
+    default String decryptUTF(byte[] input, @NotNull Charset charset) {
+        return new String(decrypt(input), charset);
+    }
 
     /**
      * Encrypts and writes the input String into the provided DataOutput.
@@ -200,8 +187,20 @@ public interface Encryptor {
      * @param input the String to encrypt and write.
      * @throws IOException if an I/O error occurs.
      */
-    default void write(@NotNull DataOutput out, @NotNull String input) throws IOException {
-        final byte[] bytes = this.encrypt(input);
+    default void writeUTF(@NotNull DataOutput out, @NotNull String input) throws IOException {
+        writeUTF(out, input, Charset.defaultCharset());
+    }
+
+    /**
+     * Encrypts and writes the input String into the provided DataOutput.
+     *
+     * @param out     the DataOutput to write into.
+     * @param input   the String to encrypt and write.
+     * @param charset the Charset to encode the String.
+     * @throws IOException if an I/O error occurs.
+     */
+    default void writeUTF(@NotNull DataOutput out, @NotNull String input, @NotNull Charset charset) throws IOException {
+        final byte[] bytes = this.encryptUTF(input, charset);
         out.writeInt(bytes.length);
         out.write(bytes);
     }
@@ -214,10 +213,23 @@ public interface Encryptor {
      * @throws IOException if an I/O error occurs.
      */
     @NotNull
-    default String read(@NotNull DataInput in) throws IOException {
+    default String readUTF(@NotNull DataInput in) throws IOException {
+        return readUTF(in, Charset.defaultCharset());
+    }
+
+    /**
+     * Reads and decrypts a String from the provided DataInput.
+     *
+     * @param in      the DataInput to read from.
+     * @param charset the Charset to decode the String.
+     * @return        a decrypted String.
+     * @throws IOException if an I/O error occurs.
+     */
+    @NotNull
+    default String readUTF(@NotNull DataInput in, @NotNull Charset charset) throws IOException {
         final int length = in.readInt();
         final byte[] bytes = new byte[length];
         in.readFully(bytes);
-        return this.decrypt(bytes);
+        return this.decryptUTF(bytes, charset);
     }
 }

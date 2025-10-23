@@ -204,7 +204,7 @@ public class MessageChannel {
             }
             out.writeInt(lines.length);
             for (Object message : lines) {
-                this.encryptor.write(out, Objects.toString(message));
+                this.encryptor.writeUTF(out, Objects.toString(message));
             }
             return arrayOut.toByteArray();
         }
@@ -226,7 +226,7 @@ public class MessageChannel {
             final String[] lines = new String[in.readInt()];
             try {
                 for (int i = 0; i < lines.length; i++) {
-                    final String message = this.encryptor.read(in);
+                    final String message = this.encryptor.readUTF(in);
                     lines[i] = message.equalsIgnoreCase("null") ? null : message;
                 }
             } catch (EOFException ignored) { }
