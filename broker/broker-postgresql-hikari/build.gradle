@@ -6,9 +6,9 @@ dependencies {
 publishing {
     publications {
         mavenJava8(MavenPublication) {
-            groupId project.group
-            artifactId project.name + '-java8'
-            version project.version
+            groupId = project.group
+            artifactId = project.name + '-java8'
+            version = project.version
             from components.java
 
             pom.withXml {
