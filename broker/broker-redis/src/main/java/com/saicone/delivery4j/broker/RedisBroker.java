@@ -2,17 +2,14 @@ package com.saicone.delivery4j.broker;
 
 import com.saicone.delivery4j.Broker;
 import org.jetbrains.annotations.NotNull;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.JedisPoolConfig;
+import redis.clients.jedis.DefaultJedisClientConfig;
+import redis.clients.jedis.JedisClientConfig;
 import redis.clients.jedis.JedisPubSub;
-import redis.clients.jedis.Protocol;
-import redis.clients.jedis.exceptions.JedisDataException;
+import redis.clients.jedis.RedisClient;
 
 import java.io.IOException;
-import java.net.URI;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
+import java.util.function.Function;
 
 /**
  * Redis broker implementation to send data via publish and subscriptions.<br>
@@ -23,50 +20,6 @@ import java.util.function.Supplier;
  * @author Rubenicos
  */
 public class RedisBroker extends Broker {
-
-    private final JedisPool pool;
-    private final Supplier<String> password;
-    private final Bridge bridge;
-
-    private long sleepTime = 8;
-    private TimeUnit sleepUnit = TimeUnit.SECONDS;
-
-    private Object aliveTask;
-
-    /**
-     * Create a redis broker with provided url.<br>
-     * This method will try to extract any password from provided url.
-     *
-     * @param url the URL to connect with.
-     * @return    a newly generated redis broker instance.
-     */
-    @NotNull
-    public static RedisBroker of(@NotNull String url) {
-        String password = "";
-        if (url.contains("@")) {
-            final String s = url.substring(0, url.lastIndexOf("@"));
-            if (s.contains(":")) {
-                password = s.substring(s.lastIndexOf(":") + 1);
-            }
-        }
-        try {
-            return of(new URI(url), password);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    /**
-     * Create a redis broker with provided url and password.
-     *
-     * @param uri      the URL object to connect with.
-     * @param password the password to validate authentication.
-     * @return         a newly generated redis broker instance.
-     */
-    @NotNull
-    public static RedisBroker of(@NotNull URI uri, @NotNull String password) {
-        return new RedisBroker(new JedisPool(uri), password);
-    }
 
     /**
      * Create a redis broker with provided parameters.
@@ -80,46 +33,44 @@ public class RedisBroker extends Broker {
      */
     @NotNull
     public static RedisBroker of(@NotNull String host, int port, @NotNull String password, int database, boolean ssl) {
-        return new RedisBroker(new JedisPool(new JedisPoolConfig(), host, port, Protocol.DEFAULT_TIMEOUT, password, database, ssl), password);
+        final JedisClientConfig config = DefaultJedisClientConfig.builder()
+                .password(password)
+                .database(database)
+                .ssl(ssl)
+                .build();
+        final RedisClient client = RedisClient.builder()
+                .hostAndPort(host, port)
+                .clientConfig(config)
+                .build();
+        return new RedisBroker(client);
+    }
+
+    private final RedisClient client;
+    private final Bridge bridge;
+
+    private long sleepTime = 8;
+    private TimeUnit sleepUnit = TimeUnit.SECONDS;
+
+    private Object aliveTask;
+
+    /**
+     * Constructs a redis broker with provided redis client.
+     *
+     * @param client the client to connect with.
+     */
+    public RedisBroker(@NotNull RedisClient client) {
+        this(client, Bridge::new);
     }
 
     /**
-     * Constructs a redis broker with provided pool and password.
+     * Constructs a redis broker with provided redis client and bridge.
      *
-     * @param pool     the pool to connect with.
-     * @param password the used redis password.
+     * @param client the client to connect with.
+     * @param bridge the bridge supplier to receive messages from redis.
      */
-    public RedisBroker(@NotNull JedisPool pool, @NotNull String password) {
-        this.pool = pool;
-        this.password = password(password);
-        this.bridge = new Bridge();
-    }
-
-    /**
-     * Constructs a redis broker with provided parameters.
-     *
-     * @param pool     the pool to connect with.
-     * @param password the used redis password.
-     * @param bridge   the bridge to receive messages from redis.
-     */
-    public RedisBroker(@NotNull JedisPool pool, @NotNull String password, @NotNull Bridge bridge) {
-        this.pool = pool;
-        this.password = password(password);
-        this.bridge = bridge;
-    }
-
-    @NotNull
-    private Supplier<String> password(@NotNull String password) {
-        return () -> {
-            final StackTraceElement[] stack = Thread.currentThread().getStackTrace();
-            for (int i = 2; i < stack.length; i++) {
-                if (stack[i].getClassName().equals(RedisBroker.class.getName())) {
-                    return password;
-                }
-            }
-
-            throw new SecurityException("Redis password is only accessible from Redis broker instance");
-        };
+    public RedisBroker(@NotNull RedisClient client, @NotNull Function<RedisBroker, Bridge> bridge) {
+        this.client = client;
+        this.bridge = bridge.apply(this);
     }
 
     @Override
@@ -137,7 +88,10 @@ public class RedisBroker extends Broker {
             this.bridge.unsubscribe();
         } catch (Throwable ignored) { }
         try {
-            this.pool.destroy();
+            this.client.close();
+        } catch (Throwable ignored) { }
+        try {
+            this.client.getPool().close();
         } catch (Throwable ignored) { }
         if (this.aliveTask != null) {
             getExecutor().cancel(this.aliveTask);
@@ -167,21 +121,9 @@ public class RedisBroker extends Broker {
     }
 
     @Override
-    protected void onSend(@NotNull String channel, byte[] data) throws IOException {
-        try (Jedis jedis = this.pool.getResource()) {
-            final String message = getCodec().encode(data);
-            try {
-                jedis.publish(channel, message);
-            } catch (JedisDataException e) {
-                // Fix Java +16 error
-                if (e.getMessage().contains("NOAUTH")) {
-                    jedis.auth(this.password.get());
-                    jedis.publish(channel, message);
-                } else {
-                    throw new IOException(e);
-                }
-            }
-        }
+    protected void onSend(@NotNull String channel, byte[] data) {
+        final String message = getCodec().encode(data);
+        this.client.publish(channel, message);
     }
 
     /**
@@ -202,8 +144,8 @@ public class RedisBroker extends Broker {
      * @return a jedis pool object.
      */
     @NotNull
-    public JedisPool getPool() {
-        return pool;
+    public RedisClient getClient() {
+        return client;
     }
 
     /**
@@ -222,13 +164,13 @@ public class RedisBroker extends Broker {
             return;
         }
         boolean reconnected = false;
-        while (isEnabled() && !Thread.interrupted() && this.pool != null && !this.pool.isClosed()) {
-            try (Jedis jedis = this.pool.getResource()) {
+        while (isEnabled() && !Thread.interrupted() && this.client != null && !this.client.getPool().isClosed()) {
+            try {
                 if (reconnected) {
                     getLogger().log(3, "Redis connection is alive again");
                 }
                 // Subscribe channels and lock the thread
-                jedis.subscribe(this.bridge, getSubscribedChannels().toArray(new String[0]));
+                this.client.subscribe(this.bridge, getSubscribedChannels().toArray(new String[0]));
             } catch (Throwable t) {
                 // Thread was unlocked due error
                 if (isEnabled()) {
@@ -259,27 +201,33 @@ public class RedisBroker extends Broker {
     /**
      * Bridge class to detect received messages from Redis database.
      */
-    public class Bridge extends JedisPubSub {
+    public static class Bridge extends JedisPubSub {
+
+        private final Broker broker;
+
+        public Bridge(@NotNull Broker broker) {
+            this.broker = broker;
+        }
 
         @Override
         public void onMessage(String channel, String message) {
-            if (channel != null && RedisBroker.this.getSubscribedChannels().contains(channel) && message != null) {
+            if (channel != null && this.broker.getSubscribedChannels().contains(channel) && message != null) {
                 try {
-                    receive(channel, getCodec().decode(message));
+                    this.broker.receive(channel, this.broker.getCodec().decode(message));
                 } catch (IOException e) {
-                    getLogger().log(2, "Cannot process received message from channel '" + channel + "'", e);
+                    this.broker.getLogger().log(2, "Cannot process received message from channel '" + channel + "'", e);
                 }
             }
         }
 
         @Override
         public void onSubscribe(String channel, int subscribedChannels) {
-            getLogger().log(3, "Redis subscribed to channel '" + channel + "'");
+            this.broker.getLogger().log(3, "Redis subscribed to channel '" + channel + "'");
         }
 
         @Override
         public void onUnsubscribe(String channel, int subscribedChannels) {
-            getLogger().log(3, "Redis unsubscribed from channel '" + channel + "'");
+            this.broker.getLogger().log(3, "Redis unsubscribed from channel '" + channel + "'");
         }
     }
 }
