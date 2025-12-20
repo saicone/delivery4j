@@ -34,7 +34,7 @@ Currently supporting the brokers:
 * [RabbitMQ](https://github.com/rabbitmq/rabbitmq-java-client) using queue and consumer via exchange.
 * [Redis](https://github.com/redis/jedis) using publish and subscribe (also compatible with [KeyDB](https://github.com/Snapchat/KeyDB)).
 * SQL polling (not a real broker, but can be used as one).
-* [Valkey](https://github.com/valkey-io/valkey-java) using a copy-paste from redis broker (since valkey java client is a jedis fork).
+* [Valkey](https://github.com/valkey-io/valkey-java) using publish and subscribe (same as Redis, but with an older API).
 
 PostgreSQL and SQL are also compatible with [Hikari](https://github.com/brettwooldridge/HikariCP).
 

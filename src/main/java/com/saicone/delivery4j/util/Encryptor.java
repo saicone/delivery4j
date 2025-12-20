@@ -84,23 +84,19 @@ public interface Encryptor {
      */
     @NotNull
     static Encryptor of(@NotNull String transformation, @NotNull SecretKey key) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
-        final Cipher encryptMode = Cipher.getInstance(transformation);
-        encryptMode.init(Cipher.ENCRYPT_MODE, key);
-        final Cipher decryptMode = Cipher.getInstance(transformation);
-        decryptMode.init(Cipher.DECRYPT_MODE, key);
         return new Encryptor() {
-            private Cipher encrypt = encryptMode;
-            private Cipher decrypt = decryptMode;
+            private Cipher encryptor;
+            private Cipher decryptor;
 
             @Override
             public byte[] encrypt(byte[] input) {
                 try {
-                    return encrypt.doFinal(input);
+                    if (encryptor == null) {
+                        encryptor = Cipher.getInstance(transformation);
+                        encryptor.init(Cipher.ENCRYPT_MODE, key);
+                    }
+                    return encryptor.doFinal(input);
                 } catch (Throwable t) {
-                    try {
-                        encrypt = Cipher.getInstance(transformation);
-                        encrypt.init(Cipher.ENCRYPT_MODE, key);
-                    } catch (Exception ignored) { }
                     throw new RuntimeException(t);
                 }
             }
@@ -108,12 +104,12 @@ public interface Encryptor {
             @Override
             public byte[] decrypt(byte[] input) {
                 try {
-                    return decrypt.doFinal(input);
+                    if (decryptor == null) {
+                        decryptor = Cipher.getInstance(transformation);
+                        decryptor.init(Cipher.DECRYPT_MODE, key);
+                    }
+                    return decryptor.doFinal(input);
                 } catch (Throwable t) {
-                    try {
-                        decrypt = Cipher.getInstance(transformation);
-                        decrypt.init(Cipher.DECRYPT_MODE, key);
-                    } catch (Exception ignored) { }
                     throw new RuntimeException(t);
                 }
             }
