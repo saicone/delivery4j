@@ -1,15 +1,13 @@
 package com.saicone.delivery4j;
 
 import com.saicone.delivery4j.util.ByteCodec;
+import com.saicone.delivery4j.util.LogFilter;
 import com.saicone.delivery4j.util.TaskExecutor;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-import java.util.logging.Level;
 
 /**
  * Represents an object that can transfer byte-array data across channels.<br>
@@ -24,7 +22,7 @@ public abstract class Broker {
     private ChannelConsumer<byte[]> consumer = (channel, data) -> {};
     private ByteCodec<String> codec = ByteCodec.BASE64;
     private TaskExecutor<?> executor = TaskExecutor.JAVA;
-    private Logger logger = Logger.of(this.getClass());
+    private LogFilter logger = LogFilter.valueOf(this.getClass(), 3);
 
     private final Set<String> subscribedChannels = new HashSet<>();
     private volatile boolean enabled = false;
@@ -113,7 +111,7 @@ public abstract class Broker {
      * @return a logger that print information about broker operations.
      */
     @NotNull
-    public Logger getLogger() {
+    public LogFilter getLogger() {
         return logger;
     }
 
@@ -168,7 +166,7 @@ public abstract class Broker {
      *
      * @param logger the logger to set.
      */
-    public void setLogger(@NotNull Logger logger) {
+    public void setLogger(@NotNull LogFilter logger) {
         this.logger = logger;
     }
 
@@ -269,130 +267,5 @@ public abstract class Broker {
     public void receive(@NotNull String channel, byte[] data) throws IOException {
         getConsumer().accept(channel, data);
         onReceive(channel, data);
-    }
-
-    /**
-     * Logger interface to print messages about broker operations and exceptions.<br>
-     * Unlike normal logger implementations, this one uses numbers as levels:<br>
-     * 1 = ERROR / SEVERE<br>
-     * 2 = WARNING<br>
-     * 3 = INFO<br>
-     * 4 = DEBUG INFORMATION
-     */
-    public interface Logger {
-
-        /**
-         * Boolean to define if DEBUG INFORMATION will be logged by default.<br>
-         * It needs the property {@code saicone.delivery4j.debug} to be set as {@code true}.
-         */
-        boolean DEBUG = "true".equals(System.getProperty("saicone.delivery4j.debug"));
-
-        /**
-         * Create a logger to provided class.<br>
-         * This method try to find the best available implementation and uses it.
-         *
-         * @param clazz the class owning the logger.
-         * @return      a newly generated logger instance.
-         */
-        @NotNull
-        static Logger of(@NotNull Class<?> clazz) {
-            try {
-                Class.forName("org.apache.logging.log4j.Logger");
-                return Class.forName("com.saicone.delivery4j.log.Log4jLogger")
-                        .asSubclass(Logger.class)
-                        .getDeclaredConstructor(Class.class)
-                        .newInstance(clazz);
-            } catch (Throwable ignored) { }
-
-            try {
-                Class.forName("org.slf4j.Logger");
-                return Class.forName("com.saicone.delivery4j.log.Slf4jLogger")
-                        .asSubclass(Logger.class)
-                        .getDeclaredConstructor(Class.class)
-                        .newInstance(clazz);
-            } catch (Throwable ignored) { }
-
-            return new Logger() {
-                private final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(clazz.getName());
-
-                private void log(int level, @NotNull Consumer<Level> consumer) {
-                    switch (level) {
-                        case 1:
-                            consumer.accept(Level.SEVERE);
-                            break;
-                        case 2:
-                            consumer.accept(Level.WARNING);
-                            break;
-                        case 3:
-                            consumer.accept(Level.INFO);
-                            break;
-                        case 4:
-                        default:
-                            if (DEBUG) {
-                                consumer.accept(Level.INFO);
-                            }
-                            break;
-                    }
-                }
-
-                @Override
-                public void log(int level, @NotNull String msg) {
-                    log(level, lvl -> this.logger.log(lvl, msg));
-                }
-
-                @Override
-                public void log(int level, @NotNull String msg, @NotNull Throwable throwable) {
-                    log(level, lvl -> this.logger.log(lvl, msg, throwable));
-                }
-
-                @Override
-                public void log(int level, @NotNull Supplier<String> msg) {
-                    log(level, lvl -> this.logger.log(lvl, msg));
-                }
-
-                @Override
-                public void log(int level, @NotNull Supplier<String> msg, @NotNull Throwable throwable) {
-                    log(level, lvl -> this.logger.log(lvl, throwable, msg));
-                }
-            };
-        }
-
-        /**
-         * Log a message.
-         *
-         * @param level the message level type.
-         * @param msg   the message to log.
-         */
-        void log(int level, @NotNull String msg);
-
-        /**
-         * Log a message, with associated Throwable information.
-         *
-         * @param level     the message level type.
-         * @param msg       the message to log.
-         * @param throwable the Throwable associated with log message.
-         */
-        void log(int level, @NotNull String msg, @NotNull Throwable throwable);
-
-        /**
-         * Log a message, which is only to be constructed if the logging level is allowed by current implementation.
-         *
-         * @param level the message level type.
-         * @param msg   the message to log.
-         */
-        default void log(int level, @NotNull Supplier<String> msg) {
-            log(level, msg.get());
-        }
-
-        /**
-         * Log a message, which is only to be constructed if the logging level is allowed by current implementation.
-         *
-         * @param level     the message level type.
-         * @param msg       the message to log.
-         * @param throwable the Throwable associated with log message.
-         */
-        default void log(int level, @NotNull Supplier<String> msg, @NotNull Throwable throwable) {
-            log(level, msg.get(), throwable);
-        }
     }
 }

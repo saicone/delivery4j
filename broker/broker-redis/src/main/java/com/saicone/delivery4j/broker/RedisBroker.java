@@ -1,6 +1,7 @@
 package com.saicone.delivery4j.broker;
 
 import com.saicone.delivery4j.Broker;
+import com.saicone.delivery4j.util.LogFilter;
 import org.jetbrains.annotations.NotNull;
 import redis.clients.jedis.DefaultJedisClientConfig;
 import redis.clients.jedis.JedisClientConfig;
@@ -167,7 +168,7 @@ public class RedisBroker extends Broker {
         while (isEnabled() && !Thread.interrupted() && this.client != null && !this.client.getPool().isClosed()) {
             try {
                 if (reconnected) {
-                    getLogger().log(3, "Redis connection is alive again");
+                    getLogger().log(LogFilter.INFO, "Redis connection is alive again");
                 }
                 // Subscribe channels and lock the thread
                 this.client.subscribe(this.bridge, getSubscribedChannels().toArray(new String[0]));
@@ -175,7 +176,7 @@ public class RedisBroker extends Broker {
                 // Thread was unlocked due error
                 if (isEnabled()) {
                     if (reconnected) {
-                        getLogger().log(2, () -> "Redis connection dropped, automatic reconnection in " + this.sleepTime + " " + this.sleepUnit.name().toLowerCase() + "...", t);
+                        getLogger().log(LogFilter.WARNING, () -> "Redis connection dropped, automatic reconnection in " + this.sleepTime + " " + this.sleepUnit.name().toLowerCase() + "...", t);
                     }
                     try {
                         this.bridge.unsubscribe();
@@ -215,19 +216,19 @@ public class RedisBroker extends Broker {
                 try {
                     this.broker.receive(channel, this.broker.getCodec().decode(message));
                 } catch (IOException e) {
-                    this.broker.getLogger().log(2, "Cannot process received message from channel '" + channel + "'", e);
+                    this.broker.getLogger().log(LogFilter.WARNING, "Cannot process received message from channel '" + channel + "'", e);
                 }
             }
         }
 
         @Override
         public void onSubscribe(String channel, int subscribedChannels) {
-            this.broker.getLogger().log(3, "Redis subscribed to channel '" + channel + "'");
+            this.broker.getLogger().log(LogFilter.INFO, "Redis subscribed to channel '" + channel + "'");
         }
 
         @Override
         public void onUnsubscribe(String channel, int subscribedChannels) {
-            this.broker.getLogger().log(3, "Redis unsubscribed from channel '" + channel + "'");
+            this.broker.getLogger().log(LogFilter.INFO, "Redis unsubscribed from channel '" + channel + "'");
         }
     }
 }

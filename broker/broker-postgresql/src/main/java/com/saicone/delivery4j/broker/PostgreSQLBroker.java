@@ -2,6 +2,7 @@ package com.saicone.delivery4j.broker;
 
 import com.saicone.delivery4j.Broker;
 import com.saicone.delivery4j.util.DataSource;
+import com.saicone.delivery4j.util.LogFilter;
 import org.jetbrains.annotations.NotNull;
 import org.postgresql.PGConnection;
 import org.postgresql.PGNotification;
@@ -92,11 +93,11 @@ public class PostgreSQLBroker extends Broker {
             this.pgConnection = this.connection.unwrap(PGConnection.class);
 
             if (this.reconnected) {
-                getLogger().log(3, "PostgreSQL connection is alive again");
+                getLogger().log(LogFilter.INFO, "PostgreSQL connection is alive again");
             }
             setEnabled(true);
         } catch (SQLException e) {
-            getLogger().log(1, "Cannot start postgres connection", e);
+            getLogger().log(LogFilter.ERROR, "Cannot start postgres connection", e);
 
             // Make an instant reconnection if occurs any error on initialization
             if (!this.reconnected) {
@@ -129,7 +130,7 @@ public class PostgreSQLBroker extends Broker {
                 stmt.execute("LISTEN " + channel);
             }
         } catch (SQLException e) {
-            getLogger().log(2, "Cannot subscribe to channel", e);
+            getLogger().log(LogFilter.WARNING, "Cannot subscribe to channel", e);
         }
     }
 
@@ -143,7 +144,7 @@ public class PostgreSQLBroker extends Broker {
                 stmt.execute("UNLISTEN " + channel);
             }
         } catch (SQLException e) {
-            getLogger().log(2, "Cannot subscribe to channel", e);
+            getLogger().log(LogFilter.WARNING, "Cannot subscribe to channel", e);
         }
     }
 
@@ -165,7 +166,7 @@ public class PostgreSQLBroker extends Broker {
                 try {
                     this.source.close();
                 } catch (SQLException e) {
-                    getLogger().log(2, "Cannot close sql connection", e);
+                    getLogger().log(LogFilter.WARNING, "Cannot close sql connection", e);
                 }
             }
         }
@@ -218,7 +219,7 @@ public class PostgreSQLBroker extends Broker {
                         try {
                             receive(channel, getCodec().decode(notification.getParameter()));
                         } catch (Throwable t) {
-                            getLogger().log(2, "Cannot process received message from channel '" + channel + "'", t);
+                            getLogger().log(LogFilter.WARNING, "Cannot process received message from channel '" + channel + "'", t);
                         }
                     }
                 }
@@ -230,7 +231,7 @@ public class PostgreSQLBroker extends Broker {
             disconnect();
             setEnabled(false);
             this.reconnected = true;
-            getLogger().log(2, () -> "PostgreSQL connection dropped, automatic reconnection every " + this.sleepTime + " " + this.sleepUnit.name().toLowerCase() + "...", t);
+            getLogger().log(LogFilter.WARNING, () -> "PostgreSQL connection dropped, automatic reconnection every " + this.sleepTime + " " + this.sleepUnit.name().toLowerCase() + "...", t);
             try {
                 Thread.sleep(this.sleepUnit.toMillis(this.sleepTime));
             } catch (InterruptedException e) {

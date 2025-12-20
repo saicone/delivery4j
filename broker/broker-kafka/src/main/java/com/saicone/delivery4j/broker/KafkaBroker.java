@@ -1,6 +1,7 @@
 package com.saicone.delivery4j.broker;
 
 import com.saicone.delivery4j.Broker;
+import com.saicone.delivery4j.util.LogFilter;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -98,7 +99,7 @@ public class KafkaBroker<K> extends Broker {
             }
             setEnabled(true);
         } catch (Throwable t) {
-            getLogger().log(1, "Cannot subscribe Kafka consumer to channels", t);
+            getLogger().log(LogFilter.ERROR, "Cannot subscribe Kafka consumer to channels", t);
         }
 
         if (isEnabled()) {
@@ -225,7 +226,7 @@ public class KafkaBroker<K> extends Broker {
                 final ConsumerRecords<K, byte[]> records = this.consumer.poll(this.timeout);
                 if (this.reconnected) {
                     this.reconnected = false;
-                    getLogger().log(3, "Kafka connection is alive again");
+                    getLogger().log(LogFilter.INFO, "Kafka connection is alive again");
                 }
                 for (ConsumerRecord<K, byte[]> record : records) {
                     final String channel = record.topic();
@@ -233,7 +234,7 @@ public class KafkaBroker<K> extends Broker {
                     try {
                         receive(channel, data);
                     } catch (Throwable t) {
-                        getLogger().log(2, "Cannot process received message from channel '" + channel + "'", t);
+                        getLogger().log(LogFilter.WARNING, "Cannot process received message from channel '" + channel + "'", t);
                     }
                 }
             }
@@ -242,7 +243,7 @@ public class KafkaBroker<K> extends Broker {
                 return;
             }
             this.reconnected = true;
-            getLogger().log(2, () -> "Kafka connection dropped, automatic reconnection every " + this.sleepTime + " " + this.sleepUnit.name().toLowerCase() + "...", t);
+            getLogger().log(LogFilter.WARNING, () -> "Kafka connection dropped, automatic reconnection every " + this.sleepTime + " " + this.sleepUnit.name().toLowerCase() + "...", t);
             try {
                 Thread.sleep(this.sleepUnit.toMillis(this.sleepTime));
             } catch (InterruptedException e) {

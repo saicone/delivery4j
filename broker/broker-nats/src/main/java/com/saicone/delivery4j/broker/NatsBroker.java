@@ -1,6 +1,7 @@
 package com.saicone.delivery4j.broker;
 
 import com.saicone.delivery4j.Broker;
+import com.saicone.delivery4j.util.LogFilter;
 import io.nats.client.Connection;
 import io.nats.client.Dispatcher;
 import io.nats.client.Nats;
@@ -101,7 +102,7 @@ public class NatsBroker extends Broker {
             try {
                 receive(channel, msg.getData());
             } catch (Throwable t) {
-                getLogger().log(2, "Cannot process received message from channel '" + channel + "'", t);
+                getLogger().log(LogFilter.WARNING, "Cannot process received message from channel '" + channel + "'", t);
             }
         });
         for (String channel : getSubscribedChannels()) {

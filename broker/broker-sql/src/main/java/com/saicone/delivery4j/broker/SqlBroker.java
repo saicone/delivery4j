@@ -2,6 +2,7 @@ package com.saicone.delivery4j.broker;
 
 import com.saicone.delivery4j.Broker;
 import com.saicone.delivery4j.util.DataSource;
+import com.saicone.delivery4j.util.LogFilter;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -101,13 +102,13 @@ public class SqlBroker extends Broker {
                 this.cleanTask = getExecutor().execute(this::cleanMessages, this.pollTime * 30L, this.pollTime * 30L, this.pollUnit);
             }
         } catch (SQLException e) {
-            getLogger().log(1, "Cannot start sql connection", e);
+            getLogger().log(LogFilter.ERROR, "Cannot start sql connection", e);
         } finally {
             if (connection != null && this.source.isClosable()) {
                 try {
                     connection.close();
                 } catch (SQLException e) {
-                    getLogger().log(2, "Cannot close sql connection", e);
+                    getLogger().log(LogFilter.WARNING, "Cannot close sql connection", e);
                 }
             }
         }
@@ -150,7 +151,7 @@ public class SqlBroker extends Broker {
                 try {
                     connection.close();
                 } catch (SQLException e) {
-                    getLogger().log(2, "Cannot close sql connection", e);
+                    getLogger().log(LogFilter.WARNING, "Cannot close sql connection", e);
                 }
             }
         }
@@ -227,20 +228,20 @@ public class SqlBroker extends Broker {
                             try {
                                 receive(channel, getCodec().decode(message));
                             } catch (IOException e) {
-                                getLogger().log(2, "Cannot process received message from channel '" + channel + "'", e);
+                                getLogger().log(LogFilter.WARNING, "Cannot process received message from channel '" + channel + "'", e);
                             }
                         }
                     }
                 }
             }
         } catch (SQLException e) {
-            getLogger().log(2, "Cannot get messages from SQL database", e);
+            getLogger().log(LogFilter.WARNING, "Cannot get messages from SQL database", e);
         } finally {
             if (connection != null && this.source.isClosable()) {
                 try {
                     connection.close();
                 } catch (SQLException e) {
-                    getLogger().log(2, "Cannot close sql connection", e);
+                    getLogger().log(LogFilter.WARNING, "Cannot close sql connection", e);
                 }
             }
         }
@@ -263,13 +264,13 @@ public class SqlBroker extends Broker {
                 statement.execute();
             }
         } catch (SQLException e) {
-            getLogger().log(2, "Cannot clean old messages from SQL database", e);
+            getLogger().log(LogFilter.WARNING, "Cannot clean old messages from SQL database", e);
         } finally {
             if (connection != null && this.source.isClosable()) {
                 try {
                     connection.close();
                 } catch (SQLException e) {
-                    getLogger().log(2, "Cannot close sql connection", e);
+                    getLogger().log(LogFilter.WARNING, "Cannot close sql connection", e);
                 }
             }
         }

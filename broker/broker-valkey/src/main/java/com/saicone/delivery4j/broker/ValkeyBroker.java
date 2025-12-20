@@ -1,6 +1,7 @@
 package com.saicone.delivery4j.broker;
 
 import com.saicone.delivery4j.Broker;
+import com.saicone.delivery4j.util.LogFilter;
 import org.jetbrains.annotations.NotNull;
 import io.valkey.Jedis;
 import io.valkey.JedisPool;
@@ -225,7 +226,7 @@ public class ValkeyBroker extends Broker {
         while (isEnabled() && !Thread.interrupted() && this.pool != null && !this.pool.isClosed()) {
             try (Jedis jedis = this.pool.getResource()) {
                 if (reconnected) {
-                    getLogger().log(3, "Valkey connection is alive again");
+                    getLogger().log(LogFilter.INFO, "Valkey connection is alive again");
                 }
                 // Subscribe channels and lock the thread
                 jedis.subscribe(this.bridge, getSubscribedChannels().toArray(new String[0]));
@@ -233,7 +234,7 @@ public class ValkeyBroker extends Broker {
                 // Thread was unlocked due error
                 if (isEnabled()) {
                     if (reconnected) {
-                        getLogger().log(2, () -> "Valkey connection dropped, automatic reconnection in " + this.sleepTime + " " + this.sleepUnit.name().toLowerCase() + "...", t);
+                        getLogger().log(LogFilter.WARNING, () -> "Valkey connection dropped, automatic reconnection in " + this.sleepTime + " " + this.sleepUnit.name().toLowerCase() + "...", t);
                     }
                     try {
                         this.bridge.unsubscribe();
@@ -267,19 +268,19 @@ public class ValkeyBroker extends Broker {
                 try {
                     receive(channel, getCodec().decode(message));
                 } catch (IOException e) {
-                    getLogger().log(2, "Cannot process received message from channel '" + channel + "'", e);
+                    getLogger().log(LogFilter.WARNING, "Cannot process received message from channel '" + channel + "'", e);
                 }
             }
         }
 
         @Override
         public void onSubscribe(String channel, int subscribedChannels) {
-            getLogger().log(3, "Valkey subscribed to channel '" + channel + "'");
+            getLogger().log(LogFilter.INFO, "Valkey subscribed to channel '" + channel + "'");
         }
 
         @Override
         public void onUnsubscribe(String channel, int subscribedChannels) {
-            getLogger().log(3, "Valkey unsubscribed from channel '" + channel + "'");
+            getLogger().log(LogFilter.INFO, "Valkey unsubscribed from channel '" + channel + "'");
         }
     }
 }

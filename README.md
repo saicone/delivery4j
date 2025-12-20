@@ -57,8 +57,6 @@ Delivery4j contains the following artifacts:
 * `broker-valkey` - Valkey broker.
 * `extension-caffeine` - Extension to detect and use Caffeine cache on MessageChannel.
 * `extension-guava` - Extension to detect and use Guava cache on MessageChannel.
-* `extension-log4j` - Extension to detect and use log4j logger on Broker instance.
-* `extension-slf4j` - Extension to detect and use slf4j logger on Broker instance.
 
 <details>
   <summary>build.gradle</summary>
@@ -196,19 +194,20 @@ It uses a number terminology for logging levels:
 4. Debug
 
 ```java
-Broker broker = // Create instance from any implementation
+Broker broker = ...;
 
-broker.setLogger(new Broker.Logger() {
-    @Override
-    public void log(int level, @NotNull String msg) {
-        // log raw message
-    }
+// --- Using existing logger instance
+Logger logger = ...;
+broker.setLogger(LogFilter.valueOf(logger, 3)); // using 3 as max logging level
+broker.setLogger(LogFilter.valueOf(logger, () -> 3)); // you can also supply the max level dynamically
 
-    @Override
-    public void log(int level, @NotNull String msg, @NotNull Throwable throwable) {
-        // log raw message with throwable
-    }
-});
+// --- Creating a logger instance from name
+broker.setLogger(LogFilter.valueOf("LogName", 3));
+broker.setLogger(LogFilter.valueOf("LogName", () -> 3));
+
+// --- Creating a logger instance from class
+broker.setLogger(LogFilter.valueOf(MyObject.class, 3));
+broker.setLogger(LogFilter.valueOf(MyObject.class, () -> 3));
 ```
 
 ### Messenger

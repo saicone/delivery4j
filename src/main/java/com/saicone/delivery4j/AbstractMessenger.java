@@ -1,6 +1,7 @@
 package com.saicone.delivery4j;
 
 import com.saicone.delivery4j.util.ByteCodec;
+import com.saicone.delivery4j.util.LogFilter;
 import com.saicone.delivery4j.util.TaskExecutor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -126,8 +127,8 @@ public abstract class AbstractMessenger {
         if (this instanceof TaskExecutor) {
             broker.setExecutor((TaskExecutor<?>) this);
         }
-        if (this instanceof Broker.Logger) {
-            broker.setLogger((Broker.Logger) this);
+        if (this instanceof LogFilter) {
+            broker.setLogger((LogFilter) this);
         }
 
         this.broker = broker;

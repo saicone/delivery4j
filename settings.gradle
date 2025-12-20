@@ -22,7 +22,5 @@ include(
 // Extensions
 include(
 	'extension:extension-caffeine',
-	'extension:extension-guava',
-	'extension:extension-log4j',
-	'extension:extension-slf4j'
+	'extension:extension-guava'
 )
