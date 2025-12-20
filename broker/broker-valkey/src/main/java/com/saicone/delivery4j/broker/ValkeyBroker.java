@@ -2,17 +2,19 @@ package com.saicone.delivery4j.broker;
 
 import com.saicone.delivery4j.Broker;
 import com.saicone.delivery4j.util.LogFilter;
+import io.valkey.BinaryJedisPubSub;
+import io.valkey.util.SafeEncoder;
 import org.jetbrains.annotations.NotNull;
 import io.valkey.Jedis;
 import io.valkey.JedisPool;
 import io.valkey.JedisPoolConfig;
-import io.valkey.JedisPubSub;
 import io.valkey.Protocol;
 import io.valkey.exceptions.JedisDataException;
 
 import java.io.IOException;
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -24,15 +26,6 @@ import java.util.function.Supplier;
  * @author Rubenicos
  */
 public class ValkeyBroker extends Broker {
-
-    private final JedisPool pool;
-    private final Supplier<String> password;
-    private final Bridge bridge;
-
-    private long sleepTime = 8;
-    private TimeUnit sleepUnit = TimeUnit.SECONDS;
-
-    private Object aliveTask;
 
     /**
      * Create a valkey broker with provided url.<br>
@@ -84,6 +77,15 @@ public class ValkeyBroker extends Broker {
         return new ValkeyBroker(new JedisPool(new JedisPoolConfig(), host, port, Protocol.DEFAULT_TIMEOUT, password, database, ssl), password);
     }
 
+    private final JedisPool pool;
+    private final Supplier<String> password;
+    private final Bridge bridge;
+
+    private long sleepTime = 8;
+    private TimeUnit sleepUnit = TimeUnit.SECONDS;
+
+    private Object aliveTask;
+
     /**
      * Constructs a valkey broker with provided pool and password.
      *
@@ -91,9 +93,7 @@ public class ValkeyBroker extends Broker {
      * @param password the used valkey password.
      */
     public ValkeyBroker(@NotNull JedisPool pool, @NotNull String password) {
-        this.pool = pool;
-        this.password = password(password);
-        this.bridge = new Bridge();
+        this(pool, password, Bridge::new);
     }
 
     /**
@@ -103,10 +103,10 @@ public class ValkeyBroker extends Broker {
      * @param password the used valkey password.
      * @param bridge   the bridge to receive messages from valkey.
      */
-    public ValkeyBroker(@NotNull JedisPool pool, @NotNull String password, @NotNull Bridge bridge) {
+    public ValkeyBroker(@NotNull JedisPool pool, @NotNull String password, @NotNull Function<ValkeyBroker, Bridge> bridge) {
         this.pool = pool;
         this.password = password(password);
-        this.bridge = bridge;
+        this.bridge = bridge.apply(this);
     }
 
     @NotNull
@@ -170,14 +170,13 @@ public class ValkeyBroker extends Broker {
     @Override
     protected void onSend(@NotNull String channel, byte[] data) throws IOException {
         try (Jedis jedis = this.pool.getResource()) {
-            final String message = getCodec().encode(data);
             try {
-                jedis.publish(channel, message);
+                jedis.publish(SafeEncoder.encode(channel), data);
             } catch (JedisDataException e) {
                 // Fix Java +16 error
                 if (e.getMessage().contains("NOAUTH")) {
                     jedis.auth(this.password.get());
-                    jedis.publish(channel, message);
+                    jedis.publish(SafeEncoder.encode(channel), data);
                 } else {
                     throw new IOException(e);
                 }
@@ -229,7 +228,7 @@ public class ValkeyBroker extends Broker {
                     getLogger().log(LogFilter.INFO, "Valkey connection is alive again");
                 }
                 // Subscribe channels and lock the thread
-                jedis.subscribe(this.bridge, getSubscribedChannels().toArray(new String[0]));
+                jedis.subscribe(this.bridge, SafeEncoder.encodeMany(getSubscribedChannels().toArray(new String[0])));
             } catch (Throwable t) {
                 // Thread was unlocked due error
                 if (isEnabled()) {
@@ -260,27 +259,34 @@ public class ValkeyBroker extends Broker {
     /**
      * Bridge class to detect received messages from Valkey database.
      */
-    public class Bridge extends JedisPubSub {
+    public static class Bridge extends BinaryJedisPubSub {
+
+        private final Broker broker;
+
+        public Bridge(@NotNull Broker broker) {
+            this.broker = broker;
+        }
 
         @Override
-        public void onMessage(String channel, String message) {
-            if (channel != null && ValkeyBroker.this.getSubscribedChannels().contains(channel) && message != null) {
+        public void onMessage(byte[] channel, byte[] message) {
+            final String channelString = SafeEncoder.encode(channel);
+            if (this.broker.getSubscribedChannels().contains(channelString)) {
                 try {
-                    receive(channel, getCodec().decode(message));
+                    this.broker.receive(channelString, message);
                 } catch (IOException e) {
-                    getLogger().log(LogFilter.WARNING, "Cannot process received message from channel '" + channel + "'", e);
+                    this.broker.getLogger().log(LogFilter.WARNING, "Cannot process received message from channel '" + channelString + "'", e);
                 }
             }
         }
 
         @Override
-        public void onSubscribe(String channel, int subscribedChannels) {
-            getLogger().log(LogFilter.INFO, "Valkey subscribed to channel '" + channel + "'");
+        public void onSubscribe(byte[] channel, int subscribedChannels) {
+            this.broker.getLogger().log(LogFilter.INFO, "Valkey subscribed to channel '" + SafeEncoder.encode(channel) + "'");
         }
 
         @Override
-        public void onUnsubscribe(String channel, int subscribedChannels) {
-            getLogger().log(LogFilter.INFO, "Valkey unsubscribed from channel '" + channel + "'");
+        public void onUnsubscribe(byte[] channel, int subscribedChannels) {
+            this.broker.getLogger().log(LogFilter.INFO, "Valkey unsubscribed from channel '" + SafeEncoder.encode(channel) + "'");
         }
     }
 }

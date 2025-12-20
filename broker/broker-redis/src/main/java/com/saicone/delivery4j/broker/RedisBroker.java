@@ -3,10 +3,11 @@ package com.saicone.delivery4j.broker;
 import com.saicone.delivery4j.Broker;
 import com.saicone.delivery4j.util.LogFilter;
 import org.jetbrains.annotations.NotNull;
+import redis.clients.jedis.BinaryJedisPubSub;
 import redis.clients.jedis.DefaultJedisClientConfig;
 import redis.clients.jedis.JedisClientConfig;
-import redis.clients.jedis.JedisPubSub;
 import redis.clients.jedis.RedisClient;
+import redis.clients.jedis.util.SafeEncoder;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
@@ -123,8 +124,7 @@ public class RedisBroker extends Broker {
 
     @Override
     protected void onSend(@NotNull String channel, byte[] data) {
-        final String message = getCodec().encode(data);
-        this.client.publish(channel, message);
+        this.client.publish(SafeEncoder.encode(channel), data);
     }
 
     /**
@@ -171,7 +171,7 @@ public class RedisBroker extends Broker {
                     getLogger().log(LogFilter.INFO, "Redis connection is alive again");
                 }
                 // Subscribe channels and lock the thread
-                this.client.subscribe(this.bridge, getSubscribedChannels().toArray(new String[0]));
+                this.client.subscribe(this.bridge, SafeEncoder.encodeMany(getSubscribedChannels().toArray(new String[0])));
             } catch (Throwable t) {
                 // Thread was unlocked due error
                 if (isEnabled()) {
@@ -202,7 +202,7 @@ public class RedisBroker extends Broker {
     /**
      * Bridge class to detect received messages from Redis database.
      */
-    public static class Bridge extends JedisPubSub {
+    public static class Bridge extends BinaryJedisPubSub {
 
         private final Broker broker;
 
@@ -211,24 +211,25 @@ public class RedisBroker extends Broker {
         }
 
         @Override
-        public void onMessage(String channel, String message) {
-            if (channel != null && this.broker.getSubscribedChannels().contains(channel) && message != null) {
+        public void onMessage(byte[] channel, byte[] message) {
+            final String channelString = SafeEncoder.encode(channel);
+            if (this.broker.getSubscribedChannels().contains(channelString)) {
                 try {
-                    this.broker.receive(channel, this.broker.getCodec().decode(message));
+                    this.broker.receive(channelString, message);
                 } catch (IOException e) {
-                    this.broker.getLogger().log(LogFilter.WARNING, "Cannot process received message from channel '" + channel + "'", e);
+                    this.broker.getLogger().log(LogFilter.WARNING, "Cannot process received message from channel '" + channelString + "'", e);
                 }
             }
         }
 
         @Override
-        public void onSubscribe(String channel, int subscribedChannels) {
-            this.broker.getLogger().log(LogFilter.INFO, "Redis subscribed to channel '" + channel + "'");
+        public void onSubscribe(byte[] channel, int subscribedChannels) {
+            this.broker.getLogger().log(LogFilter.INFO, "Redis subscribed to channel '" + SafeEncoder.encode(channel) + "'");
         }
 
         @Override
-        public void onUnsubscribe(String channel, int subscribedChannels) {
-            this.broker.getLogger().log(LogFilter.INFO, "Redis unsubscribed from channel '" + channel + "'");
+        public void onUnsubscribe(byte[] channel, int subscribedChannels) {
+            this.broker.getLogger().log(LogFilter.INFO, "Redis unsubscribed from channel '" + SafeEncoder.encode(channel) + "'");
         }
     }
 }
