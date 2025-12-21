@@ -178,7 +178,7 @@ public class RabbitMQBroker extends Broker {
     }
 
     @Override
-    protected void onSend(@NotNull String channel, byte[] data) throws IOException {
+    public void send(@NotNull String channel, byte[] data) throws IOException {
         if (this.cChannel == null) {
             return;
         }

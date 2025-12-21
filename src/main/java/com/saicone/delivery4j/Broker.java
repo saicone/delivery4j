@@ -22,7 +22,7 @@ public abstract class Broker {
     private ChannelConsumer<byte[]> consumer = (channel, data) -> {};
     private ByteCodec<String> codec = ByteCodec.BASE64;
     private TaskExecutor<?> executor = TaskExecutor.JAVA;
-    private LogFilter logger = LogFilter.valueOf(this.getClass(), 3);
+    private LogFilter logger = LogFilter.valueOf(this.getClass(), LogFilter.INFO);
 
     private final Set<String> subscribedChannels = new HashSet<>();
     private volatile boolean enabled = false;
@@ -53,25 +53,6 @@ public abstract class Broker {
      * @param channels the channels name.
      */
     protected void onUnsubscribe(@NotNull String... channels) {
-    }
-
-    /**
-     * Method to run when byte data is being sent to broker.
-     *
-     * @param channel the channel name.
-     * @param data    the byte array data to send.
-     * @throws IOException if any error occurs while sending the data.
-     */
-    protected abstract void onSend(@NotNull String channel, byte[] data) throws IOException;
-
-    /**
-     * Method to run when byte data was received from broker.
-     *
-     * @param channel the channel name.
-     * @param data    the received byte array data.
-     * @throws IOException if any error occurs while receiving the data.
-     */
-    protected void onReceive(@NotNull String channel, byte[] data) throws IOException {
     }
 
     /**
@@ -253,9 +234,7 @@ public abstract class Broker {
      * @param data    the data to send.
      * @throws IOException if anny error occurs while sending the data.
      */
-    public void send(@NotNull String channel, byte[] data) throws IOException {
-        onSend(channel, data);
-    }
+    public abstract void send(@NotNull String channel, byte[] data) throws IOException;
 
     /**
      * Receive byte array from provided channel.
@@ -266,6 +245,5 @@ public abstract class Broker {
      */
     public void receive(@NotNull String channel, byte[] data) throws IOException {
         getConsumer().accept(channel, data);
-        onReceive(channel, data);
     }
 }

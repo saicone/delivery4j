@@ -149,7 +149,7 @@ public class PostgreSQLBroker extends Broker {
     }
 
     @Override
-    protected void onSend(@NotNull String channel, byte[] data) throws IOException {
+    public void send(@NotNull String channel, byte[] data) throws IOException {
         Connection connection = null;
         try {
             connection = this.source.getConnection();

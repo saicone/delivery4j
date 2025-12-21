@@ -13,7 +13,7 @@ public class TestBroker extends Broker {
     }
 
     @Override
-    protected void onSend(@NotNull String channel, byte[] data) throws IOException {
+    public void send(@NotNull String channel, byte[] data) throws IOException {
         receive(channel, data);
     }
 }

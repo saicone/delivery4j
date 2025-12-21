@@ -108,7 +108,7 @@ public class ActiveMQBroker extends Broker {
     }
 
     @Override
-    protected void onSend(@NotNull String channel, byte[] data) throws IOException {
+    public void send(@NotNull String channel, byte[] data) throws IOException {
         final Bridge bridge = this.bridges.get(channel);
         if (bridge == null) {
             throw new IllegalArgumentException("The current broker is not subscribed to channel '" + channel + "'");

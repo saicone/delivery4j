@@ -168,7 +168,7 @@ public class ValkeyBroker extends Broker {
     }
 
     @Override
-    protected void onSend(@NotNull String channel, byte[] data) throws IOException {
+    public void send(@NotNull String channel, byte[] data) throws IOException {
         try (Jedis jedis = this.pool.getResource()) {
             try {
                 jedis.publish(SafeEncoder.encode(channel), data);

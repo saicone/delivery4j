@@ -123,7 +123,7 @@ public class RedisBroker extends Broker {
     }
 
     @Override
-    protected void onSend(@NotNull String channel, byte[] data) {
+    public void send(@NotNull String channel, byte[] data) {
         this.client.publish(SafeEncoder.encode(channel), data);
     }
 
