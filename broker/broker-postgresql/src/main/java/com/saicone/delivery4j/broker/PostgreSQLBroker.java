@@ -1,6 +1,6 @@
 package com.saicone.delivery4j.broker;
 
-import com.saicone.delivery4j.Broker;
+import com.saicone.delivery4j.PlainTextBroker;
 import com.saicone.delivery4j.util.DataSource;
 import com.saicone.delivery4j.util.LogFilter;
 import org.jetbrains.annotations.NotNull;
@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit;
  *
  * @author Rubenicos
  */
-public class PostgreSQLBroker extends Broker {
+public class PostgreSQLBroker extends PlainTextBroker {
 
     private final DataSource source;
 
@@ -149,14 +149,14 @@ public class PostgreSQLBroker extends Broker {
     }
 
     @Override
-    public void send(@NotNull String channel, byte[] data) throws IOException {
+    public void send(@NotNull String channel, @NotNull String data) throws IOException {
         Connection connection = null;
         try {
             connection = this.source.getConnection();
             // Using SELECT due NOTIFY is not compatible with prepared statements
             try (PreparedStatement stmt = connection.prepareStatement("SELECT pg_notify(?, ?)")) {
                 stmt.setString(1, channel);
-                stmt.setString(2, getCodec().encode(data));
+                stmt.setString(2, data);
                 stmt.execute();
             }
         } catch (SQLException e) {
@@ -217,7 +217,7 @@ public class PostgreSQLBroker extends Broker {
                     final String channel = notification.getName();
                     if (getSubscribedChannels().contains(channel)) {
                         try {
-                            receive(channel, getCodec().decode(notification.getParameter()));
+                            receive(channel, notification.getParameter());
                         } catch (Throwable t) {
                             getLogger().log(LogFilter.WARNING, "Cannot process received message from channel '" + channel + "'", t);
                         }

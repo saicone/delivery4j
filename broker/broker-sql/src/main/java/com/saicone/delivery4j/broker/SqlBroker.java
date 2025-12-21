@@ -1,6 +1,6 @@
 package com.saicone.delivery4j.broker;
 
-import com.saicone.delivery4j.Broker;
+import com.saicone.delivery4j.PlainTextBroker;
 import com.saicone.delivery4j.util.DataSource;
 import com.saicone.delivery4j.util.LogFilter;
 import org.jetbrains.annotations.NotNull;
@@ -22,7 +22,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  *
  * @author Rubenicos
  */
-public class SqlBroker extends Broker {
+public class SqlBroker extends PlainTextBroker {
 
     private final DataSource source;
 
@@ -130,7 +130,7 @@ public class SqlBroker extends Broker {
     }
 
     @Override
-    public void send(@NotNull String channel, byte[] data) throws IOException {
+    public void send(@NotNull String channel, @NotNull String data) throws IOException {
         if (!isEnabled()) {
             return;
         }
@@ -141,7 +141,7 @@ public class SqlBroker extends Broker {
             connection = this.source.getConnection();
             try (PreparedStatement statement = connection.prepareStatement("INSERT INTO `" + this.tablePrefix + "messenger` (`time`, `channel`, `msg`) VALUES(NOW(), ?, ?)")) {
                 statement.setString(1, channel);
-                statement.setString(2, getCodec().encode(data));
+                statement.setString(2, data);
                 statement.execute();
             }
         } catch (SQLException e) {
@@ -226,7 +226,7 @@ public class SqlBroker extends Broker {
                         final String message = rs.getString("msg");
                         if (getSubscribedChannels().contains(channel) && message != null) {
                             try {
-                                receive(channel, getCodec().decode(message));
+                                receive(channel, message);
                             } catch (IOException e) {
                                 getLogger().log(LogFilter.WARNING, "Cannot process received message from channel '" + channel + "'", e);
                             }

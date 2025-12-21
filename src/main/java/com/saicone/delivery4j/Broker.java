@@ -1,6 +1,5 @@
 package com.saicone.delivery4j;
 
-import com.saicone.delivery4j.util.ByteCodec;
 import com.saicone.delivery4j.util.LogFilter;
 import com.saicone.delivery4j.util.TaskExecutor;
 import org.jetbrains.annotations.NotNull;
@@ -20,7 +19,6 @@ import java.util.Set;
 public abstract class Broker {
 
     private ChannelConsumer<byte[]> consumer = (channel, data) -> {};
-    private ByteCodec<String> codec = ByteCodec.BASE64;
     private TaskExecutor<?> executor = TaskExecutor.JAVA;
     private LogFilter logger = LogFilter.valueOf(this.getClass(), LogFilter.INFO);
 
@@ -63,16 +61,6 @@ public abstract class Broker {
     @NotNull
     public ChannelConsumer<byte[]> getConsumer() {
         return consumer;
-    }
-
-    /**
-     * Get the current byte codec.
-     *
-     * @return a byte codec that convert bytes into/from String.
-     */
-    @NotNull
-    public ByteCodec<String> getCodec() {
-        return codec;
     }
 
     /**
@@ -122,15 +110,6 @@ public abstract class Broker {
      */
     public void setConsumer(@NotNull ChannelConsumer<byte[]> consumer) {
         this.consumer = consumer;
-    }
-
-    /**
-     * Replace the current byte codec.
-     *
-     * @param codec the byte codec to set.
-     */
-    public void setCodec(@NotNull ByteCodec<String> codec) {
-        this.codec = codec;
     }
 
     /**
