@@ -195,7 +195,7 @@ public class KafkaBroker<K> extends Broker {
      * @param unit the unit that {@code time} is expressed in.
      */
     public void setTimeout(long time, @NotNull TimeUnit unit) {
-        this.timeout = Duration.of(time, unit.toChronoUnit());
+        this.timeout = Duration.ZERO.plusNanos(unit.toNanos(time));
     }
 
     /**

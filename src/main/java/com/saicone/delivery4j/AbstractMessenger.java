@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 
 /**
  * Messenger abstract class to send messages across channels using a {@link Broker}.<br>
@@ -23,7 +24,9 @@ import java.util.concurrent.Executor;
  */
 public abstract class AbstractMessenger {
 
-    private Executor executor = CompletableFuture.completedFuture(null).defaultExecutor();
+    private Executor executor = ForkJoinPool.getCommonPoolParallelism() > 1 ? ForkJoinPool.commonPool() : command -> {
+        new Thread(command).start();
+    };
     private Broker broker;
     private final Map<String, MessageChannel> channels = new HashMap<>();
 
@@ -119,9 +122,9 @@ public abstract class AbstractMessenger {
 
         broker.getSubscribedChannels().addAll(getChannels().keySet());
         broker.setConsumer(this::accept);
-        if (this instanceof ByteCodec) {
+        if (this instanceof ByteCodec && broker instanceof PlainTextBroker) {
             try {
-                broker.setCodec((ByteCodec<String>) this);
+                ((PlainTextBroker) broker).setCodec((ByteCodec<String>) this);
             } catch (Throwable ignored) { }
         }
         if (this instanceof TaskExecutor) {
