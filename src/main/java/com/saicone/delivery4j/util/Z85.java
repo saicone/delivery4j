@@ -33,12 +33,12 @@ import java.util.Arrays;
  * This implementation contains the following types of encoding and decoding:
  * <ul>
  * <li><a id="default"><b>Default</b></a>
- * <p> A Z85 encoding scheme almost the same as original Z85 specification, with key difference to be used as a Base64 replacement.
+ * <p> A Z85 encoding scheme that is almost the same as original Z85 specification, with key difference that mean to be used as a Base64 replacement.
  *     The encoder will add a {@code ~} character for every remainder to mark an encoded non-4-length array.
- *     The decoder will read every {@code ~} character to return the same array that was encoded.</p>
+ *     The decoder will read every {@code ~} character to return the exact same array that was encoded.</p>
  * </li>
  * <li><a id="strict"><b>Strict</b></a>
- * <p> The regular and restrictive Z85 encoding scheme without any change.
+ * <p> The original and restrictive Z85 encoding scheme without any change.
  *     The encoder will fail if provided array length is not a multiply of 4.
  *     The decoder will fail if provided String length is not a multiply of 5.</p>
  * </li>
@@ -224,14 +224,18 @@ public class Z85 {
 
         private int encodeBlock(char[] out, int outPos, byte b1, byte b2, byte b3, byte b4) {
             long value = ((b1 & 0xFFL) << 24)
-                       | ((b2 & 0xFFL) << 16)
-                       | ((b3 & 0xFFL) << 8)
-                       | (b4 & 0xFFL);
+                    | ((b2 & 0xFFL) << 16)
+                    | ((b3 & 0xFFL) << 8)
+                    | (b4 & 0xFFL);
 
-            long c4 = value % 85L; value /= 85L;
-            long c3 = value % 85L; value /= 85L;
-            long c2 = value % 85L; value /= 85L;
-            long c1 = value % 85L; value /= 85L;
+            long c4 = value % 85L;
+            value /= 85L;
+            long c3 = value % 85L;
+            value /= 85L;
+            long c2 = value % 85L;
+            value /= 85L;
+            long c1 = value % 85L;
+            value /= 85L;
             long c0 = value;
 
             out[outPos++] = ALPHABET.charAt((int) c0);
@@ -331,10 +335,10 @@ public class Z85 {
                     }
 
                     final long value = (v0 * 52200625L) // 85^4
-                                     + (v1 * 614125L) // 85^3
-                                     + (v2 * 7225L) // 85^2
-                                     + (v3 * 85L)
-                                     + v4;
+                            + (v1 * 614125L) // 85^3
+                            + (v2 * 7225L) // 85^2
+                            + (v3 * 85L)
+                            + v4;
 
                     out[outPos++] = (byte) ((value >> 24) & 0xFF);
                     out[outPos++] = (byte) ((value >> 16) & 0xFF);

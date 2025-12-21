@@ -5,6 +5,12 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 
+/**
+ * Represents a Broker implementation that send and receive plain-text data
+ * using a specified byte codec to convert byte arrays into/from String.
+ *
+ * @author Rubenicos
+ */
 public abstract class PlainTextBroker extends Broker {
 
     private ByteCodec<String> codec = ByteCodec.BASE64;
@@ -33,8 +39,22 @@ public abstract class PlainTextBroker extends Broker {
         send(channel, getCodec().encode(data));
     }
 
+    /**
+     * Send plain-text data to specified channel.
+     *
+     * @param channel the channel name.
+     * @param data    the plain-text data to send.
+     * @throws IOException if an I/O error occurs.
+     */
     public abstract void send(@NotNull String channel, @NotNull String data) throws IOException;
 
+    /**
+     * Receive plain-text data from specified channel.
+     *
+     * @param channel the channel name.
+     * @param data    the plain-text data received.
+     * @throws IOException if an I/O error occurs.
+     */
     public void receive(@NotNull String channel, @NotNull String data) throws IOException {
         receive(channel, getCodec().decode(data));
     }

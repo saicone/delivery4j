@@ -206,6 +206,11 @@ public class RedisBroker extends Broker {
 
         private final Broker broker;
 
+        /**
+         * Constructs a bridge with provided broker.
+         *
+         * @param broker the broker to receive messages.
+         */
         public Bridge(@NotNull Broker broker) {
             this.broker = broker;
         }

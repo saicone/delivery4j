@@ -263,6 +263,11 @@ public class ValkeyBroker extends Broker {
 
         private final Broker broker;
 
+        /**
+         * Constructs a bridge with provided broker.
+         *
+         * @param broker the parent broker.
+         */
         public Bridge(@NotNull Broker broker) {
             this.broker = broker;
         }
