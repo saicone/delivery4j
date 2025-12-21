@@ -1,6 +1,6 @@
 package com.saicone.delivery4j.broker;
 
-import com.saicone.delivery4j.util.DataSource;
+import com.saicone.delivery4j.util.ConnectionSupplier;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.jetbrains.annotations.NotNull;
@@ -41,7 +41,7 @@ public class PostgreSQLHikariBroker extends PostgreSQLBroker {
      * @param hikari the data source that will be wrapped as cancellable data source.
      */
     public PostgreSQLHikariBroker(@NotNull HikariDataSource hikari) {
-        super(new DataSource() {
+        super(new ConnectionSupplier() {
             @Override
             public boolean isRunning() {
                 return hikari.isRunning();

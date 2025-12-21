@@ -1,7 +1,7 @@
 package com.saicone.delivery4j.broker;
 
 import com.saicone.delivery4j.PlainTextBroker;
-import com.saicone.delivery4j.util.DataSource;
+import com.saicone.delivery4j.util.ConnectionSupplier;
 import com.saicone.delivery4j.util.LogFilter;
 import org.jetbrains.annotations.NotNull;
 
@@ -24,7 +24,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public class SqlBroker extends PlainTextBroker {
 
-    private final DataSource source;
+    private final ConnectionSupplier connectionSupplier;
 
     private String tablePrefix;
     private int pollTime = 10;
@@ -46,33 +46,33 @@ public class SqlBroker extends PlainTextBroker {
      */
     @NotNull
     public static SqlBroker of(@NotNull String url, @NotNull String user, @NotNull String password) throws SQLException {
-        return new SqlBroker(DataSource.java(url, user, password));
+        return new SqlBroker(ConnectionSupplier.valueOf(url, user, password));
     }
 
     /**
      * Constructs a sql broker using the provided connection instance.<br>
      * This constructor assumes that the given connection should not be closed after return it.
      *
-     * @param con the connection that will be wrapped as non-cancellable data source.
+     * @param con the connection that will be wrapped as non-cancellable connection supplier.
      */
     public SqlBroker(@NotNull Connection con) {
-        this(DataSource.java(con));
+        this(ConnectionSupplier.valueOf(con));
     }
 
     /**
-     * Constructs a sql broker using the provided data source instance.
+     * Constructs a sql broker using the provided connection supplier instance.
      *
-     * @param source the data source that provide a database connection.
+     * @param connectionSupplier the supplier that provide a database connection.
      */
-    public SqlBroker(@NotNull DataSource source) {
-        this.source = source;
+    public SqlBroker(@NotNull ConnectionSupplier connectionSupplier) {
+        this.connectionSupplier = connectionSupplier;
     }
 
     @Override
     protected void onStart() {
         Connection connection = null;
         try {
-            connection = this.source.getConnection();
+            connection = this.connectionSupplier.getConnection();
             String createTable = "CREATE TABLE IF NOT EXISTS `" + this.tablePrefix + "messenger` (`id` INT AUTO_INCREMENT NOT NULL, `time` TIMESTAMP NOT NULL, `channel` VARCHAR(255) NOT NULL, `msg` TEXT NOT NULL, PRIMARY KEY (`id`)) DEFAULT CHARSET = utf8mb4";
             // Taken from LuckPerms
             try (Statement statement = connection.createStatement()) {
@@ -104,7 +104,7 @@ public class SqlBroker extends PlainTextBroker {
         } catch (SQLException e) {
             getLogger().log(LogFilter.ERROR, "Cannot start sql connection", e);
         } finally {
-            if (connection != null && this.source.isClosable()) {
+            if (connection != null && this.connectionSupplier.isClosable()) {
                 try {
                     connection.close();
                 } catch (SQLException e) {
@@ -117,7 +117,7 @@ public class SqlBroker extends PlainTextBroker {
     @Override
     protected void onClose() {
         try {
-            this.source.close();
+            this.connectionSupplier.close();
         } catch (SQLException ignored) { }
         if (this.getTask != null) {
             getExecutor().cancel(this.getTask);
@@ -138,7 +138,7 @@ public class SqlBroker extends PlainTextBroker {
 
         Connection connection = null;
         try {
-            connection = this.source.getConnection();
+            connection = this.connectionSupplier.getConnection();
             try (PreparedStatement statement = connection.prepareStatement("INSERT INTO `" + this.tablePrefix + "messenger` (`time`, `channel`, `msg`) VALUES(NOW(), ?, ?)")) {
                 statement.setString(1, channel);
                 statement.setString(2, data);
@@ -147,7 +147,7 @@ public class SqlBroker extends PlainTextBroker {
         } catch (SQLException e) {
             throw new IOException(e);
         } finally {
-            if (connection != null && this.source.isClosable()) {
+            if (connection != null && this.connectionSupplier.isClosable()) {
                 try {
                     connection.close();
                 } catch (SQLException e) {
@@ -184,13 +184,13 @@ public class SqlBroker extends PlainTextBroker {
     }
 
     /**
-     * Get the current data source that database connection is from.
+     * Get the current connection supplier that database connection is from.
      *
-     * @return a data source connection.
+     * @return a connection supplier connection.
      */
     @NotNull
-    public DataSource getSource() {
-        return source;
+    public ConnectionSupplier getConnectionSupplier() {
+        return connectionSupplier;
     }
 
     /**
@@ -207,14 +207,14 @@ public class SqlBroker extends PlainTextBroker {
      * Get all unread messages from database.
      */
     public void getMessages() {
-        if (!isEnabled() || !this.source.isRunning()) {
+        if (!isEnabled() || !this.connectionSupplier.isRunning()) {
             return;
         }
         this.lock.readLock().lock();
 
         Connection connection = null;
         try {
-            connection = this.source.getConnection();
+            connection = this.connectionSupplier.getConnection();
             try (PreparedStatement statement = connection.prepareStatement("SELECT `id`, `channel`, `msg` FROM `" + this.tablePrefix + "messenger` WHERE `id` > ? AND (NOW() - `time` < 30)")) {
                 statement.setLong(1, this.currentID);
                 try (ResultSet rs = statement.executeQuery()) {
@@ -237,7 +237,7 @@ public class SqlBroker extends PlainTextBroker {
         } catch (SQLException e) {
             getLogger().log(LogFilter.WARNING, "Cannot get messages from SQL database", e);
         } finally {
-            if (connection != null && this.source.isClosable()) {
+            if (connection != null && this.connectionSupplier.isClosable()) {
                 try {
                     connection.close();
                 } catch (SQLException e) {
@@ -252,21 +252,21 @@ public class SqlBroker extends PlainTextBroker {
      * Clean old messages from database.
      */
     public void cleanMessages() {
-        if (!isEnabled() || !this.source.isRunning()) {
+        if (!isEnabled() || !this.connectionSupplier.isRunning()) {
             return;
         }
         this.lock.readLock().lock();
 
         Connection connection = null;
         try {
-            connection = this.source.getConnection();
+            connection = this.connectionSupplier.getConnection();
             try (PreparedStatement statement = connection.prepareStatement("DELETE FROM `" + this.tablePrefix + "messenger` WHERE (NOW() - `time` > 60)")) {
                 statement.execute();
             }
         } catch (SQLException e) {
             getLogger().log(LogFilter.WARNING, "Cannot clean old messages from SQL database", e);
         } finally {
-            if (connection != null && this.source.isClosable()) {
+            if (connection != null && this.connectionSupplier.isClosable()) {
                 try {
                     connection.close();
                 } catch (SQLException e) {

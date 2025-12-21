@@ -1,7 +1,7 @@
 package com.saicone.delivery4j.broker;
 
 import com.saicone.delivery4j.PlainTextBroker;
-import com.saicone.delivery4j.util.DataSource;
+import com.saicone.delivery4j.util.ConnectionSupplier;
 import com.saicone.delivery4j.util.LogFilter;
 import org.jetbrains.annotations.NotNull;
 import org.postgresql.PGConnection;
@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class PostgreSQLBroker extends PlainTextBroker {
 
-    private final DataSource source;
+    private final ConnectionSupplier connectionSupplier;
 
     private int timeout = 5000;
     private long sleepTime = 8;
@@ -63,25 +63,25 @@ public class PostgreSQLBroker extends PlainTextBroker {
      * Constructs a postgres broker using the provided connection instance.<br>
      * This constructor assumes that the given connection should not be closed after return it.
      *
-     * @param con the connection that will be wrapped as non-cancellable data source.
+     * @param con the connection that will be wrapped as non-cancellable connection supplier.
      */
     public PostgreSQLBroker(@NotNull Connection con) {
-        this(DataSource.java(con));
+        this(ConnectionSupplier.valueOf(con));
     }
 
     /**
-     * Constructs a postgres broker using the provided data source instance.
+     * Constructs a postgres broker using the provided connection supplier instance.
      *
-     * @param source the data source that provide a database connection.
+     * @param connectionSupplier the supplier that provide a database connection.
      */
-    public PostgreSQLBroker(@NotNull DataSource source) {
-        this.source = source;
+    public PostgreSQLBroker(@NotNull ConnectionSupplier connectionSupplier) {
+        this.connectionSupplier = connectionSupplier;
     }
 
     @Override
     protected void onStart() {
         try {
-            this.connection = this.source.getConnection();
+            this.connection = this.connectionSupplier.getConnection();
             if (!getSubscribedChannels().isEmpty()) {
                 try (Statement stmt = this.connection.createStatement()) {
                     for (String channel : getSubscribedChannels()) {
@@ -115,7 +115,7 @@ public class PostgreSQLBroker extends PlainTextBroker {
     @Override
     protected void onClose() {
         try {
-            this.source.close();
+            this.connectionSupplier.close();
         } catch (SQLException ignored) { }
         disconnect();
     }
@@ -152,7 +152,7 @@ public class PostgreSQLBroker extends PlainTextBroker {
     public void send(@NotNull String channel, @NotNull String data) throws IOException {
         Connection connection = null;
         try {
-            connection = this.source.getConnection();
+            connection = this.connectionSupplier.getConnection();
             // Using SELECT due NOTIFY is not compatible with prepared statements
             try (PreparedStatement stmt = connection.prepareStatement("SELECT pg_notify(?, ?)")) {
                 stmt.setString(1, channel);
@@ -162,9 +162,9 @@ public class PostgreSQLBroker extends PlainTextBroker {
         } catch (SQLException e) {
             throw new IOException(e);
         } finally {
-            if (connection != null && this.source.isClosable()) {
+            if (connection != null && this.connectionSupplier.isClosable()) {
                 try {
-                    this.source.close();
+                    this.connectionSupplier.close();
                 } catch (SQLException e) {
                     getLogger().log(LogFilter.WARNING, "Cannot close sql connection", e);
                 }
@@ -197,13 +197,13 @@ public class PostgreSQLBroker extends PlainTextBroker {
     }
 
     /**
-     * Get the current data source that database connection is from.
+     * Get the current connection supplier that database connection is from.
      *
-     * @return a data source connection.
+     * @return a connection supplier connection.
      */
     @NotNull
-    public DataSource getSource() {
-        return source;
+    public ConnectionSupplier getConnectionSupplier() {
+        return connectionSupplier;
     }
 
     private void listen() {
@@ -243,7 +243,7 @@ public class PostgreSQLBroker extends PlainTextBroker {
 
     private void disconnect() {
         if (this.connection != null) {
-            if (this.source.isClosable()) {
+            if (this.connectionSupplier.isClosable()) {
                 try {
                     this.connection.close();
                 } catch (SQLException ignored) { }

@@ -14,11 +14,6 @@ include(
 	'broker:broker-valkey'
 )
 
-// Modules
-include(
-	'module:module-sql'
-)
-
 // Extensions
 include(
 	'extension:extension-caffeine',

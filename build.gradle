@@ -77,11 +77,8 @@ def javadocProjects= [
         ':broker:broker-redis',
         ':broker:broker-sql',
         ':broker:broker-sql-hikari',
-        ':module:module-sql',
         ':extension:extension-caffeine',
-        ':extension:extension-guava',
-        ':extension:extension-log4j',
-        ':extension:extension-slf4j'
+        ':extension:extension-guava'
 ]
 
 tasks.register('allJavadoc', Javadoc) {
