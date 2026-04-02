@@ -21,7 +21,7 @@ import java.util.function.Function;
  *
  * @author Rubenicos
  */
-public class RedisBroker extends Broker {
+public class JedisBroker extends Broker {
 
     /**
      * Create a redis broker with provided parameters.
@@ -34,7 +34,7 @@ public class RedisBroker extends Broker {
      * @return         a newly generated redis broker instance.
      */
     @NotNull
-    public static RedisBroker of(@NotNull String host, int port, @NotNull String password, int database, boolean ssl) {
+    public static JedisBroker of(@NotNull String host, int port, @NotNull String password, int database, boolean ssl) {
         final JedisClientConfig config = DefaultJedisClientConfig.builder()
                 .password(password)
                 .database(database)
@@ -44,7 +44,7 @@ public class RedisBroker extends Broker {
                 .hostAndPort(host, port)
                 .clientConfig(config)
                 .build();
-        return new RedisBroker(client);
+        return new JedisBroker(client);
     }
 
     private final RedisClient client;
@@ -60,7 +60,7 @@ public class RedisBroker extends Broker {
      *
      * @param client the client to connect with.
      */
-    public RedisBroker(@NotNull RedisClient client) {
+    public JedisBroker(@NotNull RedisClient client) {
         this(client, Bridge::new);
     }
 
@@ -70,7 +70,7 @@ public class RedisBroker extends Broker {
      * @param client the client to connect with.
      * @param bridge the bridge supplier to receive messages from redis.
      */
-    public RedisBroker(@NotNull RedisClient client, @NotNull Function<RedisBroker, Bridge> bridge) {
+    public JedisBroker(@NotNull RedisClient client, @NotNull Function<JedisBroker, Bridge> bridge) {
         this.client = client;
         this.bridge = bridge.apply(this);
     }
