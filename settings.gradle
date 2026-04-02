@@ -8,7 +8,7 @@ include(
 	'broker:broker-postgresql',
 	'broker:broker-postgresql-hikari',
 	'broker:broker-rabbitmq',
-	'broker:broker-redis',
+	'broker:broker-redis-jedis',
 	'broker:broker-sql',
 	'broker:broker-sql-hikari',
 	'broker:broker-valkey'
