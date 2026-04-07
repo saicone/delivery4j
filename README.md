@@ -51,6 +51,7 @@ Delivery4j contains the following artifacts:
 * `broker-postgresql-hikari-java8` - PostgreSQL broker using Hikari 4.x (for Java 8).
 * `broker-rabbitmq` - RabbitMQ broker.
 * `broker-redis-jedis` - Redis broker using [jedis](https://github.com/redis/jedis) library.
+* `broker-redis-lettuce` - Redis broker using [lettuce](https://github.com/redis/lettuce) library.
 * `broker-sql` - SQL broker using plain Java connections.
 * `broker-sql-hikari` - SQL broker using Hikari library.
 * `broker-sql-hikari-java8` - SQL broker using Hikari 4.x (for Java 8).

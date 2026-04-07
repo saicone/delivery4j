@@ -2,22 +2,21 @@ package com.saicone.delivery4j.broker;
 
 import com.saicone.delivery4j.Broker;
 import com.saicone.delivery4j.util.LogFilter;
+import io.lettuce.core.RedisClient;
+import io.lettuce.core.RedisURI;
+import io.lettuce.core.codec.ByteArrayCodec;
+import io.lettuce.core.codec.RedisCodec;
+import io.lettuce.core.codec.StringCodec;
+import io.lettuce.core.pubsub.RedisPubSubListener;
+import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Blocking;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import redis.clients.jedis.BinaryJedisPubSub;
-import redis.clients.jedis.DefaultJedisClientConfig;
-import redis.clients.jedis.HostAndPort;
-import redis.clients.jedis.JedisCluster;
-import redis.clients.jedis.JedisPooled;
-import redis.clients.jedis.RedisClient;
-import redis.clients.jedis.RedisClusterClient;
-import redis.clients.jedis.UnifiedJedis;
-import redis.clients.jedis.util.SafeEncoder;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -29,7 +28,7 @@ import java.util.function.Function;
  *
  * @author Rubenicos
  */
-public class JedisBroker extends Broker {
+public class LettuceBroker extends Broker {
 
     /**
      * Create a redis broker with provided URL string.<br>
@@ -39,8 +38,8 @@ public class JedisBroker extends Broker {
      * @return    a newly generated redis broker instance.
      */
     @NotNull
-    public static JedisBroker simple(@NotNull String url) {
-        return new JedisBroker(RedisClient.create(url));
+    public static LettuceBroker simple(@NotNull String url) {
+        return new LettuceBroker(RedisClient.create(url));
     }
 
     /**
@@ -51,8 +50,8 @@ public class JedisBroker extends Broker {
      * @return    a newly generated redis broker instance.
      */
     @NotNull
-    public static JedisBroker simple(@NotNull URI uri) {
-        return new JedisBroker(RedisClient.create(uri));
+    public static LettuceBroker simple(@NotNull URI uri) {
+        return new LettuceBroker(RedisClient.create(RedisURI.create(uri)));
     }
 
     /**
@@ -65,23 +64,22 @@ public class JedisBroker extends Broker {
      * @return         a newly generated redis broker instance.
      */
     @NotNull
-    public static JedisBroker simple(@NotNull String address, @NotNull String password, @Nullable Integer database, boolean ssl) {
-        final DefaultJedisClientConfig.Builder builder = DefaultJedisClientConfig.builder()
-                .password(password)
-                .ssl(ssl);
+    public static LettuceBroker simple(@NotNull String address, @NotNull String password, @Nullable Integer database, boolean ssl) {
+        final String[] parts = address.split(":");
+        final RedisURI.Builder builder = RedisURI.builder()
+                .withHost(parts[0])
+                .withPort(Integer.parseInt(parts[1]))
+                .withPassword(password)
+                .withSsl(ssl);
         if (database != null) {
-            builder.database(database);
+            builder.withDatabase(database);
         }
 
-        final RedisClient client = RedisClient.builder()
-                .hostAndPort(HostAndPort.from(address))
-                .clientConfig(builder.build())
-                .build();
-
-        return new JedisBroker(client);
+        return new LettuceBroker(RedisClient.create(builder.build()));
     }
 
-    private final UnifiedJedis jedis;
+    private final RedisClient client;
+    private StatefulRedisPubSubConnection<String, byte[]> pubSubConnection;
     private final Listener listener;
 
     private long sleepTime = 8;
@@ -90,20 +88,20 @@ public class JedisBroker extends Broker {
     /**
      * Constructs a redis broker with provided redis client.
      *
-     * @param jedis the client to connect with.
+     * @param client the client to connect with.
      */
-    public JedisBroker(@NotNull UnifiedJedis jedis) {
-        this(jedis, Listener::new);
+    public LettuceBroker(@NotNull RedisClient client) {
+        this(client, Listener::new);
     }
 
     /**
      * Constructs a redis broker with provided redis client and bridge.
      *
-     * @param jedis the client to connect with.
+     * @param client the client to connect with.
      * @param bridge the bridge supplier to receive messages from redis.
      */
-    public JedisBroker(@NotNull UnifiedJedis jedis, @NotNull Function<JedisBroker, Listener> bridge) {
-        this.jedis = jedis;
+    public LettuceBroker(@NotNull RedisClient client, @NotNull Function<LettuceBroker, Listener> bridge) {
+        this.client = client;
         this.listener = bridge.apply(this);
     }
 
@@ -111,37 +109,18 @@ public class JedisBroker extends Broker {
     protected void onStart() {
         setEnabled(true);
 
+        this.pubSubConnection = this.client.connectPubSub(RedisCodec.of(new StringCodec(StandardCharsets.UTF_8), new ByteArrayCodec()));
+        this.pubSubConnection.addListener(this.listener);
         this.listener.start();
     }
 
     @Override
-    @SuppressWarnings("deprecation")
     protected void onClose() {
         setEnabled(false);
 
         this.listener.close();
-
-        try {
-            this.jedis.close();
-        } catch (Throwable t) {
-            getLogger().log(LogFilter.DEBUG, "There is an error while closing jedis connection", t);
-        }
-
-        try {
-            if (this.jedis instanceof RedisClient) {
-                ((RedisClient) this.jedis).getPool().close();
-            } else if (this.jedis instanceof RedisClusterClient) {
-                ((RedisClusterClient) this.jedis).getClusterNodes().forEach((key, pool) -> pool.close());
-            } else if (this.jedis instanceof JedisPooled) {
-                // deprecated
-                ((JedisPooled) this.jedis).getPool().close();
-            } else if (this.jedis instanceof JedisCluster) {
-                // deprecated
-                ((JedisCluster) this.jedis).getClusterNodes().forEach((key, pool) -> pool.close());
-            }
-        } catch (Throwable t) {
-            getLogger().log(LogFilter.DEBUG, "There is an error while closing pool connection", t);
-        }
+        this.pubSubConnection.close();
+        this.client.shutdown();
     }
 
     @Override
@@ -158,7 +137,7 @@ public class JedisBroker extends Broker {
 
     @Override
     public void send(@NotNull String channel, byte[] data) {
-        this.jedis.publish(SafeEncoder.encode(channel), data);
+        this.pubSubConnection.sync().publish(channel, data);
     }
 
     /**
@@ -180,40 +159,37 @@ public class JedisBroker extends Broker {
      * @return true if the broker is available, false otherwise.
      */
     public boolean isAvailable() {
-        return isEnabled() && !Thread.interrupted() && !isJedisClosed();
+        return isEnabled() && !Thread.interrupted() && !isConnectionClosed();
     }
 
     /**
-     * Check if the jedis connection is closed or not. This method is used to detect if
+     * Check if the lettuce connection is closed or not. This method is used to detect if
      * the connection is alive or not, so it can be used to perform reconnections.
      *
-     * @return true if the jedis connection is closed, false otherwise.
+     * @return true if the lettuce connection is closed, false otherwise.
      */
-    @SuppressWarnings("deprecation")
-    public boolean isJedisClosed() {
-        if (this.jedis instanceof RedisClient) {
-            return ((RedisClient) this.jedis).getPool().isClosed();
-        } else if (this.jedis instanceof RedisClusterClient) {
-            return ((RedisClusterClient) this.jedis).getClusterNodes().isEmpty();
-        } else if (this.jedis instanceof JedisPooled) {
-            // deprecated
-            return ((JedisPooled) this.jedis).getPool().isClosed();
-        } else if (this.jedis instanceof JedisCluster) {
-            // deprecated
-            return ((JedisCluster) this.jedis).getClusterNodes().isEmpty();
-        } else {
-            return false;
-        }
+    public boolean isConnectionClosed() {
+        return this.pubSubConnection == null || !this.pubSubConnection.isOpen();
     }
 
     /**
-     * Get the current pool.
+     * Get the current client.
      *
-     * @return a jedis pool object.
+     * @return a redis client object.
      */
     @NotNull
-    public UnifiedJedis getJedis() {
-        return jedis;
+    public RedisClient getClient() {
+        return client;
+    }
+
+    /**
+     * Get the current pubsub connection.
+     *
+     * @return a stateful redis pubsub connection object.
+     */
+    @NotNull
+    public StatefulRedisPubSubConnection<String, byte[]> getPubSubConnection() {
+        return pubSubConnection;
     }
 
     /**
@@ -222,7 +198,7 @@ public class JedisBroker extends Broker {
      * @return a bridge instance.
      */
     @NotNull
-    public JedisBroker.Listener getListener() {
+    public LettuceBroker.Listener getListener() {
         return listener;
     }
 
@@ -248,9 +224,9 @@ public class JedisBroker extends Broker {
     /**
      * Bridge class to detect received messages from Redis database.
      */
-    public static class Listener extends BinaryJedisPubSub {
+    public static class Listener implements RedisPubSubListener<String, byte[]> {
 
-        private final JedisBroker broker;
+        private final LettuceBroker broker;
 
         private Object lockedTask;
         private boolean reconnected;
@@ -260,7 +236,7 @@ public class JedisBroker extends Broker {
          *
          * @param broker the broker to receive messages.
          */
-        public Listener(@NotNull JedisBroker broker) {
+        public Listener(@NotNull LettuceBroker broker) {
             this.broker = broker;
         }
 
@@ -270,7 +246,7 @@ public class JedisBroker extends Broker {
          */
         @ApiStatus.Internal
         public void start() {
-            // Only subscribe it there is any channel to listen (otherwise this will cause a rare exception)
+            // Only subscribe if there is any channel to listen (otherwise this will cause a rare exception)
             if (!this.broker.getSubscribedChannels().isEmpty()) {
                 this.lockedTask = this.broker.getExecutor().execute(this::subscribe);
             }
@@ -302,7 +278,7 @@ public class JedisBroker extends Broker {
                         this.broker.getLogger().log(LogFilter.INFO, "Redis connection is alive again");
                     }
                     // Subscribe channels and lock the thread
-                    this.broker.getJedis().subscribe(this, SafeEncoder.encodeMany(this.broker.getSubscribedChannels().toArray(new String[0])));
+                    this.broker.getPubSubConnection().sync().subscribe(this.broker.getSubscribedChannels().toArray(new String[0]));
                 } catch (Throwable t) {
                     // Thread was unlocked due error, lets try to reconnect
                     final boolean sleep = this.reconnected;
@@ -319,9 +295,9 @@ public class JedisBroker extends Broker {
         @ApiStatus.Internal
         public void unsubscribe0() {
             try {
-                this.unsubscribe();
+                this.broker.getPubSubConnection().sync().unsubscribe();
             } catch (Throwable t) {
-                this.broker.getLogger().log(LogFilter.DEBUG, "There is an error while unsubscribing jedis pubsub", t);
+                this.broker.getLogger().log(LogFilter.DEBUG, "There is an error while unsubscribing redis pubsub", t);
             }
         }
 
@@ -346,25 +322,39 @@ public class JedisBroker extends Broker {
         }
 
         @Override
-        public void onMessage(byte[] channel, byte[] message) {
-            final String channelString = SafeEncoder.encode(channel);
-            if (this.broker.getSubscribedChannels().contains(channelString)) {
+        public void message(String channel, byte[] message) {
+            if (this.broker.getSubscribedChannels().contains(channel)) {
                 try {
-                    this.broker.receive(channelString, message);
+                    this.broker.receive(channel, message);
                 } catch (IOException e) {
-                    this.broker.getLogger().log(LogFilter.WARNING, "Cannot process received message from channel '" + channelString + "'", e);
+                    this.broker.getLogger().log(LogFilter.WARNING, "Cannot process received message from channel '" + channel + "'", e);
                 }
             }
         }
 
         @Override
-        public void onSubscribe(byte[] channel, int subscribedChannels) {
-            this.broker.getLogger().log(LogFilter.INFO, "Redis subscribed to channel '" + SafeEncoder.encode(channel) + "'");
+        public void message(String pattern, String channel, byte[] message) {
+            this.message(channel, message);
         }
 
         @Override
-        public void onUnsubscribe(byte[] channel, int subscribedChannels) {
-            this.broker.getLogger().log(LogFilter.INFO, "Redis unsubscribed from channel '" + SafeEncoder.encode(channel) + "'");
+        public void subscribed(String channel, long count) {
+            this.broker.getLogger().log(LogFilter.INFO, "Redis subscribed to channel '" + channel + "'");
+        }
+
+        @Override
+        public void psubscribed(String pattern, long count) {
+            this.broker.getLogger().log(LogFilter.INFO, "Redis subscribed to pattern '" + pattern + "'");
+        }
+
+        @Override
+        public void unsubscribed(String channel, long count) {
+            this.broker.getLogger().log(LogFilter.INFO, "Redis unsubscribed from channel '" + channel + "'");
+        }
+
+        @Override
+        public void punsubscribed(String pattern, long count) {
+            this.broker.getLogger().log(LogFilter.INFO, "Redis unsubscribed from pattern '" + pattern + "'");
         }
     }
 }

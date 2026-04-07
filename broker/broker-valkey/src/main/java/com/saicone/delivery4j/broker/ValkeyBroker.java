@@ -79,7 +79,7 @@ public class ValkeyBroker extends Broker {
     private TimeUnit sleepUnit = TimeUnit.SECONDS;
 
     /**
-     * Constructs a redis broker with provided redis client.
+     * Constructs a valkey broker with provided jedis.
      *
      * @param jedis the client to connect with.
      */
@@ -88,10 +88,10 @@ public class ValkeyBroker extends Broker {
     }
 
     /**
-     * Constructs a redis broker with provided redis client and bridge.
+     * Constructs a valkey broker with provided jedis and bridge.
      *
      * @param jedis the client to connect with.
-     * @param bridge the bridge supplier to receive messages from redis.
+     * @param bridge the bridge supplier to receive messages from valkey.
      */
     public ValkeyBroker(@NotNull UnifiedJedis jedis, @NotNull Function<ValkeyBroker, Listener> bridge) {
         this.jedis = jedis;
@@ -146,7 +146,7 @@ public class ValkeyBroker extends Broker {
     }
 
     /**
-     * Set the reconnection interval that will be used on this redis broker instance.<br>
+     * Set the reconnection interval that will be used on this valkey broker instance.<br>
      * By default, 8 seconds is used.
      *
      * @param time the time to wait until reconnection is performed.
@@ -164,7 +164,7 @@ public class ValkeyBroker extends Broker {
      * @return true if the broker is available, false otherwise.
      */
     public boolean isAvailable() {
-        return isEnabled() && !isJedisClosed();
+        return isEnabled() && !Thread.interrupted() && !isJedisClosed();
     }
 
     /**
@@ -223,7 +223,7 @@ public class ValkeyBroker extends Broker {
     }
 
     /**
-     * Bridge class to detect received messages from Redis database.
+     * Bridge class to detect received messages from Valkey database.
      */
     public static class Listener extends BinaryJedisPubSub {
 
@@ -276,7 +276,7 @@ public class ValkeyBroker extends Broker {
             if (this.broker.isAvailable()) {
                 try {
                     if (this.reconnected) {
-                        this.broker.getLogger().log(LogFilter.INFO, "Redis connection is alive again");
+                        this.broker.getLogger().log(LogFilter.INFO, "Valkey connection is alive again");
                     }
                     // Subscribe channels and lock the thread
                     this.broker.getJedis().subscribe(this, SafeEncoder.encodeMany(this.broker.getSubscribedChannels().toArray(new String[0])));
@@ -308,9 +308,9 @@ public class ValkeyBroker extends Broker {
             }
 
             if (sleep) {
-                this.broker.getLogger().log(LogFilter.WARNING, () -> "Redis connection dropped, automatic reconnection in " + this.broker.getSleepTime() + " " + this.broker.getSleepUnit().name().toLowerCase() + "...", t);
+                this.broker.getLogger().log(LogFilter.WARNING, () -> "Valkey connection dropped, automatic reconnection in " + this.broker.getSleepTime() + " " + this.broker.getSleepUnit().name().toLowerCase() + "...", t);
             } else {
-                this.broker.getLogger().log(LogFilter.WARNING, "Redis listener got unlocked, making an instant reconnection...", t);
+                this.broker.getLogger().log(LogFilter.WARNING, "Valkey listener got unlocked, making an instant reconnection...", t);
             }
 
             unsubscribe0();
@@ -336,12 +336,12 @@ public class ValkeyBroker extends Broker {
 
         @Override
         public void onSubscribe(byte[] channel, int subscribedChannels) {
-            this.broker.getLogger().log(LogFilter.INFO, "Redis subscribed to channel '" + SafeEncoder.encode(channel) + "'");
+            this.broker.getLogger().log(LogFilter.INFO, "Valkey subscribed to channel '" + SafeEncoder.encode(channel) + "'");
         }
 
         @Override
         public void onUnsubscribe(byte[] channel, int subscribedChannels) {
-            this.broker.getLogger().log(LogFilter.INFO, "Redis unsubscribed from channel '" + SafeEncoder.encode(channel) + "'");
+            this.broker.getLogger().log(LogFilter.INFO, "Valkey unsubscribed from channel '" + SafeEncoder.encode(channel) + "'");
         }
     }
 }
