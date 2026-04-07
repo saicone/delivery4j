@@ -1,7 +1,7 @@
 /*
  * This file is part of gama, licensed under the MIT License
  *
- * Copyright (c) 2025 Rubenicos
+ * Copyright (c) 2025-2026 Rubenicos
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,7 +27,12 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -99,6 +104,70 @@ public interface TaskExecutor<T> extends Closeable {
     };
 
     /**
+     * Creates a TaskExecutor from a ScheduledExecutorService.
+     *
+     * @param scheduledExecutor the scheduled executor service.
+     * @return a newly generated TaskExecutor.
+     */
+    @NotNull
+    static TaskExecutor<Future<?>> from(@NotNull ScheduledExecutorService scheduledExecutor) {
+        return new TaskExecutor<Future<?>>() {
+            @Override
+            public @NotNull Future<?> execute(@NotNull Runnable command) {
+                command.run();
+                return CompletableFuture.completedFuture(null);
+            }
+
+            @Override
+            public @NotNull Future<?> execute(@NotNull Runnable command, long delay, @NotNull TimeUnit unit) {
+                return scheduledExecutor.schedule(command, delay, unit);
+            }
+
+            @Override
+            public @NotNull Future<?> execute(@NotNull Runnable command, long delay, long period, @NotNull TimeUnit unit) {
+                return scheduledExecutor.scheduleAtFixedRate(command, delay, period, unit);
+            }
+
+            @Override
+            public void cancel(@NotNull Future<?> future) {
+                future.cancel(false);
+            }
+        };
+    }
+
+    /**
+     * Creates a TaskExecutor from an ExecutorService and a ScheduledExecutorService.
+     *
+     * @param executor the executor service.
+     * @param scheduledExecutor the scheduled executor service.
+     * @return a newly generated TaskExecutor.
+     */
+    @NotNull
+    static TaskExecutor<Future<?>> from(@NotNull ExecutorService executor, @NotNull ScheduledExecutorService scheduledExecutor) {
+        return new TaskExecutor<Future<?>>() {
+            @Override
+            public @NotNull Future<?> execute(@NotNull Runnable command) {
+                return executor.submit(command);
+            }
+
+            @Override
+            public @NotNull Future<?> execute(@NotNull Runnable command, long delay, @NotNull TimeUnit unit) {
+                return scheduledExecutor.schedule(() -> executor.execute(command), delay, unit);
+            }
+
+            @Override
+            public @NotNull Future<?> execute(@NotNull Runnable command, long delay, long period, @NotNull TimeUnit unit) {
+                return scheduledExecutor.scheduleAtFixedRate(() -> executor.execute(command), delay, period, unit);
+            }
+
+            @Override
+            public void cancel(@NotNull Future<?> future) {
+                future.cancel(false);
+            }
+        };
+    }
+
+    /**
      * Executes the given command at some time in the future.<br>
      * Unlike {@link Executor#execute(Runnable)}, this method return the
      * task itself, that can be cancelled at some time in the future.<br>
@@ -134,6 +203,32 @@ public interface TaskExecutor<T> extends Closeable {
      */
     @NotNull
     T execute(@NotNull Runnable command, long delay, long period, @NotNull TimeUnit unit);
+
+    /**
+     * Executes the given command after the time delay has passed.
+     *
+     * @param command the runnable task.
+     * @param delay   the duration delay to pass before the task should be executed.
+     * @return        a task type that can be cancelled.
+     */
+    @NotNull
+    default T execute(@NotNull Runnable command, @NotNull Duration delay) {
+        return execute(command, delay.toMillis(), TimeUnit.MILLISECONDS);
+    }
+
+    /**
+     * Executes the given command after the initial delay has passed,
+     * and then periodically executed with the specified period.
+     *
+     * @param command the runnable task.
+     * @param delay   the duration delay to pass before the first execution of the task.
+     * @param period  the duration between task executions after the first execution of the task.
+     * @return        a task type that can be cancelled.
+     */
+    @NotNull
+    default T execute(@NotNull Runnable command, @NotNull Duration delay, @NotNull Duration period) {
+        return execute(command, delay.toMillis(), period.toMillis(), TimeUnit.MILLISECONDS);
+    }
 
     /**
      * Cancel a task type that was created by this executor.
