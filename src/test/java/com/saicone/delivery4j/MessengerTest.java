@@ -2,6 +2,7 @@ package com.saicone.delivery4j;
 
 import com.saicone.delivery4j.broker.TestBroker;
 import com.saicone.delivery4j.impl.TestMessenger;
+import com.saicone.delivery4j.util.DataIdentifier;
 import com.saicone.delivery4j.util.Encryptor;
 import org.junit.jupiter.api.Test;
 
@@ -38,7 +39,7 @@ public class MessengerTest {
     }
 
     @Test
-    public void testCache() {
+    public void testIdentifier() {
         final TestMessenger messenger = new TestMessenger();
         messenger.start();
 
@@ -46,7 +47,7 @@ public class MessengerTest {
         messenger.subscribe(CHANNEL).consume((channel, lines) -> {
             result[0] = channel;
             result[1] = lines[0];
-        }).cache(true);
+        }).identifier(DataIdentifier.bit32());
 
         messenger.send(CHANNEL, MESSAGE);
 

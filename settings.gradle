@@ -1,6 +1,5 @@
 rootProject.name = 'delivery4j'
 
-// Broker types
 include(
 	'broker:broker-activemq',
 	'broker:broker-kafka',
@@ -13,10 +12,4 @@ include(
 	'broker:broker-sql',
 	'broker:broker-sql-hikari',
 	'broker:broker-valkey'
-)
-
-// Extensions
-include(
-	'extension:extension-caffeine',
-	'extension:extension-guava'
 )

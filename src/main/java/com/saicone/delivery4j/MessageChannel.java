@@ -1,5 +1,6 @@
 package com.saicone.delivery4j;
 
+import com.saicone.delivery4j.util.DataIdentifier;
 import com.saicone.delivery4j.util.Encryptor;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -11,11 +12,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
 
 /**
  * An object to consume channel messages.<br>
@@ -27,7 +24,7 @@ public class MessageChannel {
 
     private final String name;
     private ChannelConsumer<String[]> consumer;
-    private Cache cache;
+    private DataIdentifier identifier;
     private Encryptor encryptor = Encryptor.empty();
 
     /**
@@ -82,13 +79,13 @@ public class MessageChannel {
     }
 
     /**
-     * Get the current cache instance.
+     * Get the current data identifier.
      *
-     * @return a message ID cache if exists, null otherwise.
+     * @return a data identifier if exists, null otherwise.
      */
     @Nullable
-    public Cache getCache() {
-        return cache;
+    public DataIdentifier getIdentifier() {
+        return identifier;
     }
 
     /**
@@ -136,44 +133,15 @@ public class MessageChannel {
     }
 
     /**
-     * Set caching status for the current message channel.
+     * Set the data identifier for the current message channel.
      *
-     * @param enable true to use default cache parameters, false to remove any cache instance.
-     * @return       the current message channel.
+     * @param identifier the data identifier.
+     * @return           the current message channel.
      */
     @NotNull
     @Contract("_ -> this")
-    public MessageChannel cache(boolean enable) {
-        if (enable) {
-            return cache(10, TimeUnit.SECONDS);
-        } else {
-            return cache(null);
-        }
-    }
-
-    /**
-     * Set the cache time for the current message channel.
-     *
-     * @param duration the time to wait until any message ID will be deleted.
-     * @param unit     the unit for the provided time.
-     * @return         the current message channel.
-     */
-    @NotNull
-    @Contract("_, _ -> this")
-    public MessageChannel cache(long duration, @NotNull TimeUnit unit) {
-        return cache(Cache.of(duration, unit));
-    }
-
-    /**
-     * Set the cache instance for the current message channel.
-     *
-     * @param cache the message ID cache.
-     * @return      the current message channel.
-     */
-    @NotNull
-    @Contract("_ -> this")
-    public MessageChannel cache(@Nullable Cache cache) {
-        this.cache = cache;
+    public MessageChannel identifier(@Nullable DataIdentifier identifier) {
+        this.identifier = identifier;
         return this;
     }
 
@@ -199,8 +167,8 @@ public class MessageChannel {
      */
     public byte[] encode(@Nullable Object... lines) throws IOException {
         try (ByteArrayOutputStream arrayOut = new ByteArrayOutputStream(); DataOutputStream out = new DataOutputStream(arrayOut)) {
-            if (this.cache != null) {
-                out.writeInt(this.cache.generate());
+            if (this.identifier != null) {
+                this.identifier.write(out);
             }
             out.writeInt(lines.length);
             for (Object message : lines) {
@@ -220,7 +188,7 @@ public class MessageChannel {
     @Nullable
     public String[] decode(byte[] src) throws IOException {
         try (DataInputStream in = new DataInputStream(new ByteArrayInputStream(src))) {
-            if (this.cache != null && this.cache.contains(in.readInt())) {
+            if (this.identifier != null && !this.identifier.read(in)) {
                 return null;
             }
             final String[] lines = new String[in.readInt()];
@@ -256,97 +224,6 @@ public class MessageChannel {
      * Clear the current message channel instance.
      */
     public void clear() {
-        if (this.cache != null) {
-            this.cache.clear();
-        }
-    }
-
-    /**
-     * Cache interface to store message IDs with certain delay.
-     */
-    public static abstract class Cache {
-
-        /**
-         * Create a cache with provided expiration.<br>
-         * This method try to find the best available implementation and uses it.
-         *
-         * @param duration the length of time after a message ID is automatically removed.
-         * @param unit     the unit that {@code duration} is expressed in.
-         * @return         a newly generate cache instance.
-         */
-        @NotNull
-        public static Cache of(long duration, @NotNull TimeUnit unit) {
-            try {
-                Class.forName("com.github.benmanes.caffeine.cache.Caffeine");
-                return Class.forName("com.saicone.delivery4j.cache.CaffeineCache")
-                        .asSubclass(Cache.class)
-                        .getDeclaredConstructor(long.class, TimeUnit.class)
-                        .newInstance(duration, unit);
-            } catch (Throwable ignored) { }
-
-            try {
-                Class.forName("com.google.common.cache.CacheBuilder");
-                return Class.forName("com.saicone.delivery4j.cache.GuavaCache")
-                        .asSubclass(Cache.class)
-                        .getDeclaredConstructor(long.class, TimeUnit.class)
-                        .newInstance(duration, unit);
-            } catch (Throwable ignored) { }
-
-            return new Cache() {
-                private final Map<Integer, Long> cache = new HashMap<>();
-                private final long millis = unit.toMillis(duration);
-
-                @Override
-                protected void save(int id) {
-                    final long currentTime = System.currentTimeMillis();
-                    if (id < 1999) { // 20%
-                        final long time = currentTime - this.millis;
-                        this.cache.entrySet().removeIf(entry -> entry.getValue() <= time);
-                    }
-                    this.cache.put(id, currentTime);
-                }
-
-                @Override
-                public boolean contains(int id) {
-                    return this.cache.containsKey(id);
-                }
-
-                @Override
-                public void clear() {
-                    this.cache.clear();
-                }
-            };
-        }
-
-        /**
-         * Save message ID.
-         *
-         * @param id the ID of the message to save.
-         */
-        protected abstract void save(int id);
-
-        /**
-         * Check if the current cache contains the provided message ID.
-         *
-         * @param id the ID of the message.
-         * @return   true if the message is already saved, false otherwise.
-         */
-        public abstract boolean contains(int id);
-
-        /**
-         * Generate message ID and save into cache.
-         *
-         * @return a message ID.
-         */
-        public int generate() {
-            final int id = ThreadLocalRandom.current().nextInt(0, 999999 + 1);
-            save(id);
-            return id;
-        }
-
-        /**
-         * Clear the current cache instance values.
-         */
-        public abstract void clear();
+        // empty default method
     }
 }

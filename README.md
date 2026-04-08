@@ -56,8 +56,6 @@ Delivery4j contains the following artifacts:
 * `broker-sql-hikari` - SQL broker using Hikari library.
 * `broker-sql-hikari-java8` - SQL broker using Hikari 4.x (for Java 8).
 * `broker-valkey` - Valkey broker.
-* `extension-caffeine` - Extension to detect and use Caffeine cache on MessageChannel.
-* `extension-guava` - Extension to detect and use Guava cache on MessageChannel.
 
 <details>
   <summary>build.gradle</summary>
@@ -243,7 +241,7 @@ messenger.subscribe("myChannel1").consume((channel, lines) -> {
 });
 ```
 
-The subscribed message channels can have a cache instance to avoid receive outbound messages, by default it use the best available implementation.
+The subscribed message channels can have an identifier instance to avoid receive outbound messages.
 
 ```java
 Messenger messenger = new Messenger();
@@ -253,11 +251,11 @@ MessageChannel channel = messenger.subscribe("myChannel1").consume((channel, lin
     // do something
 });
 
-// Cache message IDs
-channel.cache(true);
+// Provide a 32-bit identifier
+chanel.identifier(DataIdentifier.bit32());
 
-// Cache with provided expiration
-channel.cache(20, TimeUnit.SECONDS);
+// Provide a 64-bit identifier (only needed if your application can send more than 32767 messages per second)
+chanel.identifier(DataIdentifier.bit32());
 ```
 
 And also can have an end-to-end encryption.
