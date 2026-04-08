@@ -4,6 +4,10 @@ dependencies {
     api 'org.apache.activemq:activemq-client:6.2.3'
 }
 
+java {
+    toolchain.languageVersion.set(JavaLanguageVersion.of(17))
+}
+
 javadoc {
     options {
         links 'https://javadoc.io/doc/org.apache.activemq/activemq-client/latest/'

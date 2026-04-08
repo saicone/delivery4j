@@ -5,6 +5,14 @@ dependencies {
     api 'com.zaxxer:HikariCP:7.0.2'
 }
 
+java {
+    toolchain.languageVersion.set(JavaLanguageVersion.of(11))
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 8
+}
+
 javadoc {
     options {
         links 'https://javadoc.io/doc/com.zaxxer/HikariCP/latest/'
