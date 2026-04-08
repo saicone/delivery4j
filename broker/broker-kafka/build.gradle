@@ -3,3 +3,9 @@ description = 'Delivery4j Broker Kafka'
 dependencies {
     api 'org.apache.kafka:kafka-clients:4.2.0'
 }
+
+javadoc {
+    options {
+        links 'https://javadoc.io/doc/org.apache.kafka/kafka-clients/latest/'
+    }
+}

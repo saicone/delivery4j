@@ -3,3 +3,9 @@ description = 'Delivery4j Broker RabbitMQ'
 dependencies {
     api 'com.rabbitmq:amqp-client:5.29.0'
 }
+
+javadoc {
+    options {
+        links 'https://rabbitmq.github.io/rabbitmq-java-client/api/current/'
+    }
+}

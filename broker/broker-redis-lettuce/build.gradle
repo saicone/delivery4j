@@ -3,3 +3,9 @@ description = 'Delivery4j Broker Redis Lettuce'
 dependencies {
     api 'io.lettuce:lettuce-core:7.5.1.RELEASE'
 }
+
+javadoc {
+    options {
+        links 'https://javadoc.io/doc/io.lettuce/lettuce-core/latest/'
+    }
+}

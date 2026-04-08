@@ -3,3 +3,9 @@ description = 'Delivery4j Broker Valkey'
 dependencies {
     api 'io.valkey:valkey-java:5.5.0'
 }
+
+javadoc {
+    options {
+        links 'https://javadoc.io/doc/io.valkey/valkey-java/latest/'
+    }
+}

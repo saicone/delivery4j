@@ -3,3 +3,9 @@ description = 'Delivery4j Broker ActiveMQ'
 dependencies {
     api 'org.apache.activemq:activemq-client:6.2.3'
 }
+
+javadoc {
+    options {
+        links 'https://javadoc.io/doc/org.apache.activemq/activemq-client/latest/'
+    }
+}
