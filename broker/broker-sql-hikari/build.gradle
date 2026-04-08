@@ -10,32 +10,3 @@ javadoc {
         links 'https://javadoc.io/doc/com.zaxxer/HikariCP/latest/'
     }
 }
-
-publishing {
-    publications {
-        mavenJava8(MavenPublication) {
-            groupId = project.group
-            artifactId = project.name + '-java8'
-            version = project.version
-            from components.java
-
-            pom.withXml {
-                def root = asNode()
-
-                def dependenciesNode = root.get("dependencies")?.getAt(0)
-                if (dependenciesNode) {
-                    dependenciesNode.children().removeIf { dep ->
-                        dep.groupId.text() == "com.zaxxer" && dep.artifactId.text() == "HikariCP"
-                    }
-                } else {
-                    dependenciesNode = root.appendNode("dependencies")
-                }
-
-                def dependencyNode = dependenciesNode.appendNode("dependency")
-                dependencyNode.appendNode("groupId", "com.zaxxer")
-                dependencyNode.appendNode("artifactId", "HikariCP")
-                dependencyNode.appendNode("version", "4.0.3")
-            }
-        }
-    }
-}

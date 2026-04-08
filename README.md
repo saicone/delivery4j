@@ -48,14 +48,15 @@ Delivery4j contains the following artifacts:
 * `delivery4j-broker-nats` - NATS broker.
 * `delivery4j-broker-postgresql` - PostgreSQL broker using plain Java connections.
 * `delivery4j-broker-postgresql-hikari` - PostgreSQL broker using Hikari library.
-* `delivery4j-broker-postgresql-hikari-java8` - PostgreSQL broker using Hikari 4.x (for Java 8).
 * `delivery4j-broker-rabbitmq` - RabbitMQ broker.
 * `delivery4j-broker-redis-jedis` - Redis broker using [jedis](https://github.com/redis/jedis) library.
 * `delivery4j-broker-redis-lettuce` - Redis broker using [lettuce](https://github.com/redis/lettuce) library.
 * `delivery4j-broker-sql` - SQL broker using plain Java connections.
 * `delivery4j-broker-sql-hikari` - SQL broker using Hikari library.
-* `delivery4j-broker-sql-hikari-java8` - SQL broker using Hikari 4.x (for Java 8).
 * `delivery4j-broker-valkey` - Valkey broker.
+
+> [!NOTE]
+> If you still on Java 8 and want to use a `-hikari` artifact, filter the hikari sub-dependency and manually add hikari 4.x to your project.
 
 <details>
   <summary>build.gradle</summary>

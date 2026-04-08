@@ -40,9 +40,9 @@ public abstract class AbstractMessenger {
     }
 
     /**
-     * Get the current executor, by default {@link CompletableFuture#defaultExecutor()} is used.
+     * Get the current executor, by default {@link ForkJoinPool#commonPool()} is used.
      *
-     * @return a executor used to run any {@link CompletableFuture} used in this class.
+     * @return an executor used to run any {@link CompletableFuture} used in this class.
      */
     @NotNull
     public Executor getExecutor() {
