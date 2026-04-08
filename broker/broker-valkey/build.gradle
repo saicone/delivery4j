@@ -1,3 +1,5 @@
+description = 'Delivery4j Broker Valkey'
+
 dependencies {
     api 'io.valkey:valkey-java:5.5.0'
 }

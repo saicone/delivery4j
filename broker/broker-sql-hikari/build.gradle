@@ -1,3 +1,5 @@
+description = 'Delivery4j Broker SQL Hikari'
+
 dependencies {
     api project(':broker:broker-sql')
     api 'com.zaxxer:HikariCP:7.0.2'

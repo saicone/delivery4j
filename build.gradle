@@ -1,8 +1,17 @@
+
+description = 'Delivery4j'
+
 allprojects {
+    if (project.name == 'broker') {
+        return
+    }
+
     apply plugin: 'java'
     apply plugin: 'idea'
     apply plugin: 'java-library'
     apply plugin: 'maven-publish'
+
+    apply from: "$rootDir/gradle/publish-config.gradle"
 
     idea {
         module {
@@ -33,18 +42,39 @@ allprojects {
     publishing {
         publications {
             maven(MavenPublication) {
-                groupId = project.group
-                artifactId = project.name
-                version = project.version
                 from components.java
+
+                pom {
+                    afterEvaluate {
+                        description = 'Java library facade for multiple data delivery concepts'
+                    }
+                }
             }
         }
     }
 }
 
 subprojects {
+    if (project.name == 'broker') {
+        return
+    }
+
     dependencies {
         implementation rootProject
+    }
+
+    publishing {
+        publications {
+            maven(MavenPublication) {
+                artifactId = 'delivery4j-' + project.name
+
+                pom {
+                    afterEvaluate {
+                        description = "Module \"${project.name}\" of Delivery4j"
+                    }
+                }
+            }
+        }
     }
 }
 

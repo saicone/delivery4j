@@ -12,8 +12,8 @@
     <a href="https://github.com/saicone/delivery4j">
         <img src="https://img.shields.io/github/languages/code-size/saicone/delivery4j?logo=github&logoColor=white&style=flat-square"/>
     </a>
-    <a href="https://jitpack.io/#com.saicone/delivery4j">
-        <img src="https://jitpack.io/v/com.saicone/delivery4j.svg?style=flat-square"/>
+    <a href="https://central.sonatype.com/artifact/com.saicone/delivery4j">
+        <img src="https://img.shields.io/maven-central/v/com.saicone/delivery4j"/>
     </a>
     <a href="https://javadoc.saicone.com/delivery4j/overview-summary.html">
         <img src="https://img.shields.io/badge/JavaDoc-Online-green?style=flat-square"/>
@@ -43,30 +43,26 @@ PostgreSQL and SQL are also compatible with [Hikari](https://github.com/brettwoo
 Delivery4j contains the following artifacts:
 
 * `delivery4j` - The main project.
-* `broker-activemq` - ActiveMQ broker.
-* `broker-kafka` - Kafka broker.
-* `broker-nats` - NATS broker.
-* `broker-postgresql` - PostgreSQL broker using plain Java connections.
-* `broker-postgresql-hikari` - PostgreSQL broker using Hikari library.
-* `broker-postgresql-hikari-java8` - PostgreSQL broker using Hikari 4.x (for Java 8).
-* `broker-rabbitmq` - RabbitMQ broker.
-* `broker-redis-jedis` - Redis broker using [jedis](https://github.com/redis/jedis) library.
-* `broker-redis-lettuce` - Redis broker using [lettuce](https://github.com/redis/lettuce) library.
-* `broker-sql` - SQL broker using plain Java connections.
-* `broker-sql-hikari` - SQL broker using Hikari library.
-* `broker-sql-hikari-java8` - SQL broker using Hikari 4.x (for Java 8).
-* `broker-valkey` - Valkey broker.
+* `delivery4j-broker-activemq` - ActiveMQ broker.
+* `delivery4j-broker-kafka` - Kafka broker.
+* `delivery4j-broker-nats` - NATS broker.
+* `delivery4j-broker-postgresql` - PostgreSQL broker using plain Java connections.
+* `delivery4j-broker-postgresql-hikari` - PostgreSQL broker using Hikari library.
+* `delivery4j-broker-postgresql-hikari-java8` - PostgreSQL broker using Hikari 4.x (for Java 8).
+* `delivery4j-broker-rabbitmq` - RabbitMQ broker.
+* `delivery4j-broker-redis-jedis` - Redis broker using [jedis](https://github.com/redis/jedis) library.
+* `delivery4j-broker-redis-lettuce` - Redis broker using [lettuce](https://github.com/redis/lettuce) library.
+* `delivery4j-broker-sql` - SQL broker using plain Java connections.
+* `delivery4j-broker-sql-hikari` - SQL broker using Hikari library.
+* `delivery4j-broker-sql-hikari-java8` - SQL broker using Hikari 4.x (for Java 8).
+* `delivery4j-broker-valkey` - Valkey broker.
 
 <details>
   <summary>build.gradle</summary>
 
 ```groovy
-repositories {
-    maven { url 'https://jitpack.io' }
-}
-
 dependencies {
-    implementation 'com.saicone.delivery4j:delivery4j:1.1.5'
+    implementation 'com.saicone:delivery4j:1.1.5'
 }
 ```
 
@@ -76,12 +72,8 @@ dependencies {
   <summary>build.gradle.kts</summary>
 
 ```kotlin
-repositories {
-    maven("https://jitpack.io")
-}
-
 dependencies {
-    implementation("com.saicone.delivery4j:delivery4j:1.1.5")
+    implementation("com.saicone:delivery4j:1.1.5")
 }
 ```
 
@@ -91,16 +83,9 @@ dependencies {
   <summary>pom.xml</summary>
 
 ```xml
-<repositories>
-    <repository>
-        <id>Jitpack</id>
-        <url>https://jitpack.io</url>
-    </repository>
-</repositories>
-
 <dependencies>
     <dependency>
-        <groupId>com.saicone.delivery4j</groupId>
+        <groupId>com.saicone</groupId>
         <artifactId>delivery4j</artifactId>
         <version>1.1.5</version>
         <scope>compile</scope>
@@ -255,7 +240,7 @@ MessageChannel channel = messenger.subscribe("myChannel1").consume((channel, lin
 chanel.identifier(DataIdentifier.bit32());
 
 // Provide a 64-bit identifier (only needed if your application can send more than 32767 messages per second)
-chanel.identifier(DataIdentifier.bit32());
+chanel.identifier(DataIdentifier.bit64());
 ```
 
 And also can have an end-to-end encryption.

@@ -1,3 +1,5 @@
+description = 'Delivery4j Broker Redis Jedis'
+
 dependencies {
     api 'redis.clients:jedis:7.4.1'
 }

@@ -1,3 +1,5 @@
+description = 'Delivery4j Broker ActiveMQ'
+
 dependencies {
     api 'org.apache.activemq:activemq-client:6.2.3'
 }
