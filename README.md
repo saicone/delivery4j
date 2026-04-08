@@ -63,7 +63,7 @@ Delivery4j contains the following artifacts:
 
 ```groovy
 dependencies {
-    implementation 'com.saicone:delivery4j:1.1.5'
+    implementation 'com.saicone:delivery4j:1.1.6'
 }
 ```
 
@@ -74,7 +74,7 @@ dependencies {
 
 ```kotlin
 dependencies {
-    implementation("com.saicone:delivery4j:1.1.5")
+    implementation("com.saicone:delivery4j:1.1.6")
 }
 ```
 
@@ -88,7 +88,7 @@ dependencies {
     <dependency>
         <groupId>com.saicone</groupId>
         <artifactId>delivery4j</artifactId>
-        <version>1.1.5</version>
+        <version>1.1.6</version>
         <scope>compile</scope>
     </dependency>
 </dependencies>
