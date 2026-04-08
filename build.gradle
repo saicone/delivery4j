@@ -33,8 +33,7 @@ allprojects {
     }
 
     java {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        toolchain.languageVersion.set(JavaLanguageVersion.of(8))
         withSourcesJar()
         withJavadocJar()
     }
@@ -127,8 +126,13 @@ def javadocProjects= [
 
 tasks.register('allJavadoc', Javadoc) {
     group = 'documentation'
+
     source javadocProjects.collect { project(it).sourceSets.main.allJava }
     classpath = files(javadocProjects.collect { project(it).sourceSets.main.compileClasspath })
+    javadocTool.set(javaToolchains.javadocToolFor {
+        languageVersion.set(JavaLanguageVersion.of(25))
+    })
+
     options {
         // Java
         links 'https://docs.oracle.com/en/java/javase/11/docs/api/'
