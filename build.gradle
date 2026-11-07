@@ -110,24 +110,11 @@ tasks.register('allJavadoc', Javadoc) {
     })
 
     options {
-        // Java
-        links 'https://docs.oracle.com/en/java/javase/11/docs/api/'
-
-        // Broker
-        links 'https://javadoc.io/doc/org.apache.activemq/activemq-client/latest/'
-        links 'https://javadoc.io/doc/org.apache.kafka/kafka-clients/latest/'
-        links 'https://javadoc.io/doc/io.nats/jnats/latest/'
-        links 'https://javadoc.io/doc/org.postgresql/postgresql/latest/'
-        links 'https://rabbitmq.github.io/rabbitmq-java-client/api/current/'
-        links 'https://javadoc.io/doc/redis.clients/jedis/latest/'
-        links 'https://javadoc.io/doc/io.lettuce/lettuce-core/latest/'
-        links 'https://javadoc.io/doc/com.zaxxer/HikariCP/latest/'
-        links 'https://javadoc.io/doc/io.valkey/valkey-java/latest/'
-
-        // Common
-        links 'https://logging.apache.org/log4j/2.x/javadoc/log4j-api/'
-        links 'https://slf4j.org/api/'
-        links 'https://javadoc.io/doc/org.jetbrains/annotations/latest/'
+        def allLinks = javadocProjects.collect { projectPath ->
+            project(projectPath).javadoc.options.links
+        }.flatten().unique()
+        allLinks.each { link -> links link }
     }
+
     destinationDir = file(project.layout.buildDirectory.dir('docs/all-javadoc'))
 }
