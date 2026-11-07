@@ -42,7 +42,7 @@ PostgreSQL and SQL are also compatible with [Hikari](https://github.com/brettwoo
 
 Delivery4j contains the following artifacts:
 
-* `delivery4j` - The main project.
+* `delivery4j-api` - The main project.
 * `delivery4j-broker-activemq` - ActiveMQ broker.
 * `delivery4j-broker-kafka` - Kafka broker.
 * `delivery4j-broker-nats` - NATS broker.
@@ -63,7 +63,7 @@ Delivery4j contains the following artifacts:
 
 ```groovy
 dependencies {
-    implementation 'com.saicone:delivery4j:1.1.6'
+    implementation 'com.saicone:delivery4j-api:1.1.6'
 }
 ```
 
@@ -74,7 +74,7 @@ dependencies {
 
 ```kotlin
 dependencies {
-    implementation("com.saicone:delivery4j:1.1.6")
+    implementation("com.saicone:delivery4j-api:1.1.6")
 }
 ```
 
@@ -87,7 +87,7 @@ dependencies {
 <dependencies>
     <dependency>
         <groupId>com.saicone</groupId>
-        <artifactId>delivery4j</artifactId>
+        <artifactId>delivery4j-api</artifactId>
         <version>1.1.6</version>
         <scope>compile</scope>
     </dependency>

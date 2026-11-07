@@ -1,6 +1,3 @@
-
-description = 'Delivery4j'
-
 allprojects {
     if (project.name == 'broker') {
         return
@@ -8,10 +5,6 @@ allprojects {
 
     apply plugin: 'java'
     apply plugin: 'idea'
-    apply plugin: 'java-library'
-    apply plugin: 'maven-publish'
-
-    apply from: "$rootDir/gradle/publish-config.gradle"
 
     idea {
         module {
@@ -44,20 +37,6 @@ allprojects {
             links 'https://javadoc.io/doc/org.jetbrains/annotations/latest/'
         }
     }
-
-    publishing {
-        publications {
-            maven(MavenPublication) {
-                from components.java
-
-                pom {
-                    afterEvaluate {
-                        description = 'Java library facade for multiple data delivery concepts'
-                    }
-                }
-            }
-        }
-    }
 }
 
 subprojects {
@@ -65,40 +44,37 @@ subprojects {
         return
     }
 
-    dependencies {
-        implementation project(':')
-    }
+    apply plugin: 'java-library'
+    apply plugin: 'maven-publish'
+
+    apply from: "$rootDir/gradle/publish-config.gradle"
 
     publishing {
         publications {
             maven(MavenPublication) {
-                artifactId = 'delivery4j-' + project.name
+                from components.java
+            }
+        }
+    }
 
-                pom {
-                    afterEvaluate {
-                        description = "Module \"${project.name}\" of Delivery4j"
+    if (project.name.startsWith('broker-')) {
+        dependencies {
+            api project(':api')
+        }
+
+        publishing {
+            publications {
+                maven(MavenPublication) {
+                    artifactId = 'delivery4j-' + project.name
+
+                    pom {
+                        afterEvaluate {
+                            description = "Module \"${project.name}\" of Delivery4j"
+                        }
                     }
                 }
             }
         }
-    }
-}
-
-dependencies {
-    compileOnly('org.apache.logging.log4j:log4j-api:2.25.4') { transitive = false }
-    compileOnly('org.slf4j:slf4j-api:2.0.17') { transitive = false }
-
-    testImplementation(platform('org.junit:junit-bom:5.14.3'))
-    testImplementation('org.junit.jupiter:junit-jupiter')
-    testRuntimeOnly('org.junit.platform:junit-platform-launcher')
-
-    testImplementation 'org.jetbrains:annotations:26.1.0'
-}
-
-test {
-    useJUnitPlatform()
-    testLogging {
-        events "passed", "skipped", "failed"
     }
 }
 
@@ -110,7 +86,7 @@ javadoc {
 }
 
 def javadocProjects= [
-        ':',
+        ':api',
         ':broker:broker-activemq',
         ':broker:broker-kafka',
         ':broker:broker-nats',
