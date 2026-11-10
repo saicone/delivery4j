@@ -18,7 +18,7 @@ allprojects {
     }
 
     dependencies {
-        compileOnly 'org.jetbrains:annotations:26.1.0'
+        compileOnly libs.annotations
     }
 
     compileJava {
@@ -34,7 +34,7 @@ allprojects {
     javadoc {
         options {
             links 'https://docs.oracle.com/en/java/javase/11/docs/api/'
-            links 'https://javadoc.io/doc/org.jetbrains/annotations/latest/'
+            links "https://javadoc.io/doc/org.jetbrains/annotations/${libs.versions.annotations.get()}/"
         }
     }
 }

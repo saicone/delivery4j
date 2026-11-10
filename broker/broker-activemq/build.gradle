@@ -1,7 +1,7 @@
 description = 'Delivery4j Broker ActiveMQ'
 
 dependencies {
-    api 'org.apache.activemq:activemq-client:6.2.3'
+    api libs.activemq.client
 }
 
 java {
@@ -10,6 +10,6 @@ java {
 
 javadoc {
     options {
-        links 'https://javadoc.io/doc/org.apache.activemq/activemq-client/latest/'
+        links "https://javadoc.io/doc/org.apache.activemq/activemq-client/${libs.versions.activemq.get()}/"
     }
 }

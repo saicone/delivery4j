@@ -1,11 +1,11 @@
 description = 'Delivery4j Broker Redis Jedis'
 
 dependencies {
-    api 'redis.clients:jedis:7.4.1'
+    api libs.jedis
 }
 
 javadoc {
     options {
-        links 'https://javadoc.io/doc/redis.clients/jedis/latest/'
+        links "https://javadoc.io/doc/redis.clients/jedis/${libs.versions.jedis.get()}/"
     }
 }

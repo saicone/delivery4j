@@ -1,11 +1,11 @@
 description = 'Delivery4j Broker PostgreSQL'
 
 dependencies {
-    api 'org.postgresql:postgresql:42.7.10'
+    api libs.postgresql
 }
 
 javadoc {
     options {
-        links 'https://javadoc.io/doc/org.postgresql/postgresql/latest/'
+        links "https://javadoc.io/doc/org.postgresql/postgresql/${libs.versions.postgresql.get()}/"
     }
 }

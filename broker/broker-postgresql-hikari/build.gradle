@@ -2,7 +2,7 @@ description = 'Delivery4j Broker PostgreSQL Hikari'
 
 dependencies {
     api project(':broker:broker-postgresql')
-    api 'com.zaxxer:HikariCP:7.0.2'
+    api libs.hikaricp
 }
 
 java {
@@ -15,7 +15,7 @@ tasks.withType(JavaCompile).configureEach {
 
 javadoc {
     options {
-        links 'https://javadoc.io/doc/org.postgresql/postgresql/latest/'
-        links 'https://javadoc.io/doc/com.zaxxer/HikariCP/latest/'
+        links "https://javadoc.io/doc/org.postgresql/postgresql/${libs.versions.postgresql.get()}/"
+        links "https://javadoc.io/doc/com.zaxxer/HikariCP/${libs.versions.hikaricp.get()}/"
     }
 }

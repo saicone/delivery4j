@@ -1,11 +1,11 @@
 description = 'Delivery4j Broker NATS'
 
 dependencies {
-    api 'io.nats:jnats:2.25.2'
+    api libs.nats
 }
 
 javadoc {
     options {
-        links 'https://javadoc.io/doc/io.nats/jnats/latest/'
+        links "https://javadoc.io/doc/io.nats/jnats/${libs.versions.nats.get()}/"
     }
 }
