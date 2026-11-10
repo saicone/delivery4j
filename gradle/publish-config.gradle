@@ -1,10 +1,15 @@
+def central = !"true".equalsIgnoreCase(System.getenv("JITPACK"))
+
 apply plugin: 'maven-publish'
-apply plugin: 'signing'
+
+if (central) {
+    apply plugin: 'signing'
+}
 
 publishing {
     publications {
         maven(MavenPublication) {
-            groupId = project.group
+            groupId = central ? project.group : (System.getenv("GROUP") ?: "com.saicone.delivery4j")
             artifactId = project.name
             version = project.version
 
@@ -50,23 +55,27 @@ publishing {
         }
     }
 
-    repositories {
-        maven {
-            name = 'Deployment'
+    if (central) {
+        repositories {
+            maven {
+                name = 'Deployment'
 
-            url = version.endsWith("SNAPSHOT") ?
-                    uri("https://central.sonatype.com/repository/maven-snapshots/") :
-                    uri("https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/")
+                url = version.endsWith("SNAPSHOT") ?
+                        uri("https://central.sonatype.com/repository/maven-snapshots/") :
+                        uri("https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/")
 
-            credentials {
-                username = project.findProperty("maven.publish.username") ?: ""
-                password = project.findProperty("maven.publish.password") ?: ""
+                credentials {
+                    username = project.findProperty("maven.publish.username") ?: ""
+                    password = project.findProperty("maven.publish.password") ?: ""
+                }
             }
         }
     }
 }
 
-signing {
-    useGpgCmd()
-    sign publishing.publications.maven
+if (central) {
+    signing {
+        useGpgCmd()
+        sign publishing.publications.maven
+    }
 }
