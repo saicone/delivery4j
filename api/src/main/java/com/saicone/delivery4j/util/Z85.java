@@ -1,5 +1,5 @@
 /*
- * This file is part of gama, licensed under the MIT License
+ * MIT License.
  *
  * Copyright (c) 2025-2026 Rubenicos
  *
@@ -21,6 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
 package com.saicone.delivery4j.util;
 
 import org.jetbrains.annotations.NotNull;

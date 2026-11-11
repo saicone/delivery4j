@@ -140,7 +140,7 @@ public class RabbitMQBroker extends Broker {
 
         // Maintain the connection alive
         if (this.aliveTask == null) {
-            this.aliveTask = getExecutor().execute(this::alive, this.checkTime, this.checkTime, this.checkUnit);
+            this.aliveTask = getExecutor().runTimer(this::alive, this.checkTime, this.checkTime, this.checkUnit);
         }
     }
 

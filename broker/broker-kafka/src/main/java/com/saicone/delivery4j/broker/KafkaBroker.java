@@ -102,7 +102,7 @@ public class KafkaBroker<K> extends Broker {
         }
 
         if (isEnabled()) {
-            this.listenTask = getExecutor().execute(this::listen);
+            this.listenTask = getExecutor().run(this::listen);
         }
     }
 

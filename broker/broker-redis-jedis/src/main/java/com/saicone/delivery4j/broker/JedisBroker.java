@@ -267,7 +267,7 @@ public class JedisBroker extends Broker {
         public void start() {
             // Only subscribe it there is any channel to listen (otherwise this will cause a rare exception)
             if (!this.broker.getSubscribedChannels().isEmpty()) {
-                this.lockedTask = this.broker.getExecutor().execute(this::subscribe);
+                this.lockedTask = this.broker.getExecutor().run(this::subscribe);
             }
         }
 
@@ -334,7 +334,7 @@ public class JedisBroker extends Broker {
             unsubscribe0();
 
             if (sleep) {
-                this.broker.getExecutor().execute(this::start, this.broker.getSleepTime(), this.broker.getSleepUnit());
+                this.broker.getExecutor().runLater(this::start, this.broker.getSleepTime(), this.broker.getSleepUnit());
             } else {
                 start();
             }

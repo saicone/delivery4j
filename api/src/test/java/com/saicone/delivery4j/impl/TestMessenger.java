@@ -20,19 +20,19 @@ public class TestMessenger extends AbstractMessenger implements TaskExecutor<Voi
     }
 
     @Override
-    public @NotNull Void execute(@NotNull Runnable command) {
+    public @NotNull Void run(@NotNull Runnable command) {
         command.run();
         return null;
     }
 
     @Override
-    public @NotNull Void execute(@NotNull Runnable command, long delay, @NotNull TimeUnit unit) {
+    public @NotNull Void runLater(@NotNull Runnable command, long delay, @NotNull TimeUnit unit) {
         command.run();
         return null;
     }
 
     @Override
-    public @NotNull Void execute(@NotNull Runnable command, long delay, long period, @NotNull TimeUnit unit) {
+    public @NotNull Void runTimer(@NotNull Runnable command, long delay, long period, @NotNull TimeUnit unit) {
         command.run();
         return null;
     }

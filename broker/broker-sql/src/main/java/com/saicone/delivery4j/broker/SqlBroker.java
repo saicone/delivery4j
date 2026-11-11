@@ -95,10 +95,10 @@ public class SqlBroker extends PlainTextBroker {
             }
             setEnabled(true);
             if (this.getTask == null) {
-                this.getTask = getExecutor().execute(this::getMessages, this.pollTime, this.pollTime, this.pollUnit);
+                this.getTask = getExecutor().runTimer(this::getMessages, this.pollTime, this.pollTime, this.pollUnit);
             }
             if (this.cleanTask == null) {
-                this.cleanTask = getExecutor().execute(this::cleanMessages, this.pollTime * 30L, this.pollTime * 30L, this.pollUnit);
+                this.cleanTask = getExecutor().runTimer(this::cleanMessages, this.pollTime * 30L, this.pollTime * 30L, this.pollUnit);
             }
         } catch (SQLException e) {
             getLogger().error("Cannot start sql connection", e);
