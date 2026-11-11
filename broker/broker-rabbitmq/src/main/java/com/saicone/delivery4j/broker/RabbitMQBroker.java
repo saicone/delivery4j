@@ -6,7 +6,6 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.saicone.delivery4j.Broker;
-import com.saicone.delivery4j.util.LogFilter;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -130,12 +129,12 @@ public class RabbitMQBroker extends Broker {
             }, __ -> {}); // Without canceled delivery
 
             if (this.reconnected) {
-                getLogger().log(LogFilter.INFO, "RabbitMQ connection is alive again");
+                getLogger().info("RabbitMQ connection is alive again");
                 this.reconnected = false;
             }
             setEnabled(true);
         } catch (Throwable t) {
-            getLogger().log(LogFilter.ERROR, "Cannot start RabbitMQ connection", t);
+            getLogger().error("Cannot start RabbitMQ connection", t);
             return;
         }
 
@@ -161,7 +160,7 @@ public class RabbitMQBroker extends Broker {
             try {
                 this.cChannel.queueBind(this.queue, this.exchange, channel);
             } catch (IOException e) {
-                getLogger().log(LogFilter.ERROR, "Cannot subscribe to channel '" + channel + "'", e);
+                getLogger().error("Cannot subscribe to channel '" + channel + "'", e);
             }
         }
     }
@@ -172,7 +171,7 @@ public class RabbitMQBroker extends Broker {
             try {
                 this.cChannel.queueUnbind(this.queue, this.exchange, channel);
             } catch (IOException e) {
-                getLogger().log(LogFilter.ERROR, "Cannot unsubscribe from channel '" + channel + "'", e);
+                getLogger().error("Cannot unsubscribe from channel '" + channel + "'", e);
             }
         }
     }
@@ -221,7 +220,7 @@ public class RabbitMQBroker extends Broker {
             close(this.cChannel);
             this.cChannel = null;
             this.reconnected = true;
-            getLogger().log(LogFilter.WARNING, () -> "RabbitMQ connection dropped, automatic reconnection every " + this.checkTime + " " + this.checkUnit.name().toLowerCase() + "...");
+            getLogger().warning(() -> "RabbitMQ connection dropped, automatic reconnection every " + this.checkTime + " " + this.checkUnit.name().toLowerCase() + "...");
             onStart();
         }
     }

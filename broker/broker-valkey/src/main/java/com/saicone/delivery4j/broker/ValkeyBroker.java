@@ -1,7 +1,6 @@
 package com.saicone.delivery4j.broker;
 
 import com.saicone.delivery4j.Broker;
-import com.saicone.delivery4j.util.LogFilter;
 import io.valkey.BinaryJedisPubSub;
 import io.valkey.DefaultJedisClientConfig;
 import io.valkey.HostAndPort;
@@ -114,7 +113,7 @@ public class ValkeyBroker extends Broker {
         try {
             this.jedis.close();
         } catch (Throwable t) {
-            getLogger().log(LogFilter.DEBUG, "There is an error while closing jedis connection", t);
+            getLogger().debug("There is an error while closing jedis connection", t);
         }
 
         try {
@@ -124,7 +123,7 @@ public class ValkeyBroker extends Broker {
                 ((JedisCluster) this.jedis).getClusterNodes().forEach((key, pool) -> pool.close());
             }
         } catch (Throwable t) {
-            getLogger().log(LogFilter.DEBUG, "There is an error while closing pool connection", t);
+            getLogger().debug("There is an error while closing pool connection", t);
         }
     }
 
@@ -276,7 +275,7 @@ public class ValkeyBroker extends Broker {
             if (this.broker.isAvailable()) {
                 try {
                     if (this.reconnected) {
-                        this.broker.getLogger().log(LogFilter.INFO, "Valkey connection is alive again");
+                        this.broker.getLogger().info("Valkey connection is alive again");
                     }
                     // Subscribe channels and lock the thread
                     this.broker.getJedis().subscribe(this, SafeEncoder.encodeMany(this.broker.getSubscribedChannels().toArray(new String[0])));
@@ -298,7 +297,7 @@ public class ValkeyBroker extends Broker {
             try {
                 this.unsubscribe();
             } catch (Throwable t) {
-                this.broker.getLogger().log(LogFilter.DEBUG, "There is an error while unsubscribing jedis pubsub", t);
+                this.broker.getLogger().debug("There is an error while unsubscribing jedis pubsub", t);
             }
         }
 
@@ -308,9 +307,9 @@ public class ValkeyBroker extends Broker {
             }
 
             if (sleep) {
-                this.broker.getLogger().log(LogFilter.WARNING, () -> "Valkey connection dropped, automatic reconnection in " + this.broker.getSleepTime() + " " + this.broker.getSleepUnit().name().toLowerCase() + "...", t);
+                this.broker.getLogger().warning(() -> "Valkey connection dropped, automatic reconnection in " + this.broker.getSleepTime() + " " + this.broker.getSleepUnit().name().toLowerCase() + "...", t);
             } else {
-                this.broker.getLogger().log(LogFilter.WARNING, "Valkey listener got unlocked, making an instant reconnection...", t);
+                this.broker.getLogger().warning("Valkey listener got unlocked, making an instant reconnection...", t);
             }
 
             unsubscribe0();
@@ -329,19 +328,19 @@ public class ValkeyBroker extends Broker {
                 try {
                     this.broker.receive(channelString, message);
                 } catch (IOException e) {
-                    this.broker.getLogger().log(LogFilter.WARNING, "Cannot process received message from channel '" + channelString + "'", e);
+                    this.broker.getLogger().warning("Cannot process received message from channel '" + channelString + "'", e);
                 }
             }
         }
 
         @Override
         public void onSubscribe(byte[] channel, int subscribedChannels) {
-            this.broker.getLogger().log(LogFilter.INFO, "Valkey subscribed to channel '" + SafeEncoder.encode(channel) + "'");
+            this.broker.getLogger().info("Valkey subscribed to channel '" + SafeEncoder.encode(channel) + "'");
         }
 
         @Override
         public void onUnsubscribe(byte[] channel, int subscribedChannels) {
-            this.broker.getLogger().log(LogFilter.INFO, "Valkey unsubscribed from channel '" + SafeEncoder.encode(channel) + "'");
+            this.broker.getLogger().info("Valkey unsubscribed from channel '" + SafeEncoder.encode(channel) + "'");
         }
     }
 }

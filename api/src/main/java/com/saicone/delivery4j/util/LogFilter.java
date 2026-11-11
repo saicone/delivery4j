@@ -1,9 +1,31 @@
+/*
+ * MIT License.
+ *
+ * Copyright (c) 2025-2026 Rubenicos
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package com.saicone.delivery4j.util;
 
-import org.apache.logging.log4j.LogManager;
 import org.intellij.lang.annotations.MagicConstant;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.LoggerFactory;
 
 import java.util.Objects;
 import java.util.function.Supplier;
@@ -74,16 +96,16 @@ public interface LogFilter {
         Objects.requireNonNull(clazz, "Cannot create LogFilter for null class");
         Objects.requireNonNull(maxLevel, "Cannot create LogFilter using null max level supplier");
 
-        // log4j
-        try {
-            Class.forName("org.apache.logging.log4j.Logger");
-            return new Log4j(LogManager.getLogger(clazz), maxLevel);
-        } catch (Throwable ignored) { }
-
         // slf4j
         try {
             Class.forName("org.slf4j.Logger");
-            return new Slf4j(LoggerFactory.getLogger(clazz), maxLevel);
+            return new Slf4j(org.slf4j.LoggerFactory.getLogger(clazz), maxLevel);
+        } catch (Throwable ignored) { }
+
+        // log4j
+        try {
+            Class.forName("org.apache.logging.log4j.Logger");
+            return new Log4j(org.apache.logging.log4j.LogManager.getLogger(clazz), maxLevel);
         } catch (Throwable ignored) { }
 
         // fallback
@@ -116,16 +138,16 @@ public interface LogFilter {
         Objects.requireNonNull(name, "Cannot create LogFilter for null name");
         Objects.requireNonNull(maxLevel, "Cannot create LogFilter using null max level supplier");
 
-        // log4j
-        try {
-            Class.forName("org.apache.logging.log4j.Logger");
-            return new Log4j(LogManager.getLogger(name), maxLevel);
-        } catch (Throwable ignored) { }
-
         // slf4j
         try {
             Class.forName("org.slf4j.Logger");
-            return new Slf4j(LoggerFactory.getLogger(name), maxLevel);
+            return new Slf4j(org.slf4j.LoggerFactory.getLogger(name), maxLevel);
+        } catch (Throwable ignored) { }
+
+        // log4j
+        try {
+            Class.forName("org.apache.logging.log4j.Logger");
+            return new Log4j(org.apache.logging.log4j.LogManager.getLogger(name), maxLevel);
         } catch (Throwable ignored) { }
 
         // fallback
@@ -168,19 +190,19 @@ public interface LogFilter {
             return new Java((Logger) object, maxLevel);
         }
 
-        // log4j
-        try {
-            final Class<?> type = Class.forName("org.apache.logging.log4j.Logger");
-            if (type.isInstance(object)) {
-                return new Log4j((org.apache.logging.log4j.Logger) object, maxLevel);
-            }
-        } catch (Throwable ignored) { }
-
         // slf4j
         try {
             final Class<?> type = Class.forName("org.slf4j.Logger");
             if (type.isInstance(object)) {
                 return new Slf4j((org.slf4j.Logger) object, maxLevel);
+            }
+        } catch (Throwable ignored) { }
+
+        // log4j
+        try {
+            final Class<?> type = Class.forName("org.apache.logging.log4j.Logger");
+            if (type.isInstance(object)) {
+                return new Log4j((org.apache.logging.log4j.Logger) object, maxLevel);
             }
         } catch (Throwable ignored) { }
 
@@ -231,6 +253,158 @@ public interface LogFilter {
      */
     default void log(@MagicConstant(valuesFromClass = LogFilter.class) int level, @NotNull Supplier<String> msg, @NotNull Throwable throwable) {
         log(level, msg.get(), throwable);
+    }
+
+    /**
+     * Log a message.
+     *
+     * @param msg the message to log.
+     */
+    default void error(@NotNull String msg) {
+        log(LogFilter.ERROR, msg);
+    }
+
+    /**
+     * Log a message, with associated Throwable information.
+     *
+     * @param msg       the message to log.
+     * @param throwable the Throwable associated with log message.
+     */
+    default void error(@NotNull String msg, @NotNull Throwable throwable) {
+        log(LogFilter.ERROR, msg, throwable);
+    }
+
+    /**
+     * Log a message, which is only to be constructed if the logging level is allowed by current implementation.
+     *
+     * @param msg the message to log.
+     */
+    default void error(@NotNull Supplier<String> msg) {
+        log(LogFilter.ERROR, msg);
+    }
+
+    /**
+     * Log a message, which is only to be constructed if the logging level is allowed by current implementation.
+     *
+     * @param msg       the message to log.
+     * @param throwable the Throwable associated with log message.
+     */
+    default void error(@NotNull Supplier<String> msg, @NotNull Throwable throwable) {
+        log(LogFilter.ERROR, msg, throwable);
+    }
+
+    /**
+     * Log a message.
+     *
+     * @param msg the message to log.
+     */
+    default void warning(@NotNull String msg) {
+        log(LogFilter.WARNING, msg);
+    }
+
+    /**
+     * Log a message, with associated Throwable information.
+     *
+     * @param msg       the message to log.
+     * @param throwable the Throwable associated with log message.
+     */
+    default void warning(@NotNull String msg, @NotNull Throwable throwable) {
+        log(LogFilter.WARNING, msg, throwable);
+    }
+
+    /**
+     * Log a message, which is only to be constructed if the logging level is allowed by current implementation.
+     *
+     * @param msg the message to log.
+     */
+    default void warning(@NotNull Supplier<String> msg) {
+        log(LogFilter.WARNING, msg);
+    }
+
+    /**
+     * Log a message, which is only to be constructed if the logging level is allowed by current implementation.
+     *
+     * @param msg       the message to log.
+     * @param throwable the Throwable associated with log message.
+     */
+    default void warning(@NotNull Supplier<String> msg, @NotNull Throwable throwable) {
+        log(LogFilter.WARNING, msg, throwable);
+    }
+
+    /**
+     * Log a message.
+     *
+     * @param msg the message to log.
+     */
+    default void info(@NotNull String msg) {
+        log(LogFilter.INFO, msg);
+    }
+
+    /**
+     * Log a message, with associated Throwable information.
+     *
+     * @param msg       the message to log.
+     * @param throwable the Throwable associated with log message.
+     */
+    default void info(@NotNull String msg, @NotNull Throwable throwable) {
+        log(LogFilter.INFO, msg, throwable);
+    }
+
+    /**
+     * Log a message, which is only to be constructed if the logging level is allowed by current implementation.
+     *
+     * @param msg the message to log.
+     */
+    default void info(@NotNull Supplier<String> msg) {
+        log(LogFilter.INFO, msg);
+    }
+
+    /**
+     * Log a message, which is only to be constructed if the logging level is allowed by current implementation.
+     *
+     * @param msg       the message to log.
+     * @param throwable the Throwable associated with log message.
+     */
+    default void info(@NotNull Supplier<String> msg, @NotNull Throwable throwable) {
+        log(LogFilter.INFO, msg, throwable);
+    }
+
+    /**
+     * Log a message.
+     *
+     * @param msg the message to log.
+     */
+    default void debug(@NotNull String msg) {
+        log(LogFilter.DEBUG, msg);
+    }
+
+    /**
+     * Log a message, with associated Throwable information.
+     *
+     * @param msg       the message to log.
+     * @param throwable the Throwable associated with log message.
+     */
+    default void debug(@NotNull String msg, @NotNull Throwable throwable) {
+        log(LogFilter.DEBUG, msg, throwable);
+    }
+
+    /**
+     * Log a message, which is only to be constructed if the logging level is allowed by current implementation.
+     *
+     * @param msg the message to log.
+     */
+    default void debug(@NotNull Supplier<String> msg) {
+        log(LogFilter.DEBUG, msg);
+    }
+
+    /**
+     * Log a message, which is only to be constructed if the logging level is allowed by current implementation.
+     *
+     * @param msg       the message to log.
+     * @param throwable the Throwable associated with log message.
+     */
+    default void debug(@NotNull Supplier<String> msg, @NotNull Throwable throwable) {
+        log(LogFilter.DEBUG, msg, throwable);
     }
 
     /**
@@ -305,81 +479,6 @@ public interface LogFilter {
                 return;
             }
             this.logger.log(LEVELS[level], throwable, msg);
-        }
-    }
-
-    /**
-     * Log4j2 implementation of LogFilter.
-     */
-    class Log4j implements LogFilter {
-
-        private static final org.apache.logging.log4j.Level[] LEVELS = new org.apache.logging.log4j.Level[] {
-                null,
-                org.apache.logging.log4j.Level.ERROR,
-                org.apache.logging.log4j.Level.WARN,
-                org.apache.logging.log4j.Level.INFO,
-                org.apache.logging.log4j.Level.INFO
-        };
-
-        private final org.apache.logging.log4j.Logger logger;
-        private final Supplier<Integer> maxLevel;
-
-        /**
-         * Constructor of Log4j LogFilter.
-         *
-         * @param logger   the Log4j2 logger.
-         * @param maxLevel the maximum logging level supplier.
-         */
-        public Log4j(@NotNull org.apache.logging.log4j.Logger logger, @NotNull Supplier<Integer> maxLevel) {
-            this.logger = logger;
-            this.maxLevel = maxLevel;
-        }
-
-        /**
-         * Get the underlying Log4j2 logger.
-         *
-         * @return the Log4j2 logger.
-         */
-        @NotNull
-        public org.apache.logging.log4j.Logger logger() {
-            return logger;
-        }
-
-        @Override
-        public int maxLevel() {
-            return maxLevel.get();
-        }
-
-        @Override
-        public void log(@MagicConstant(valuesFromClass = LogFilter.class) int level, @NotNull String msg) {
-            if (level > maxLevel()) {
-                return;
-            }
-            this.logger.log(LEVELS[level], msg);
-        }
-
-        @Override
-        public void log(@MagicConstant(valuesFromClass = LogFilter.class) int level, @NotNull String msg, @NotNull Throwable throwable) {
-            if (level > maxLevel()) {
-                return;
-            }
-            this.logger.log(LEVELS[level], msg, throwable);
-        }
-
-        @Override
-        public void log(@MagicConstant(valuesFromClass = LogFilter.class) int level, @NotNull Supplier<String> msg) {
-            if (level > maxLevel()) {
-                return;
-            }
-            this.logger.log(LEVELS[level], msg);
-        }
-
-        @Override
-        public void log(@MagicConstant(valuesFromClass = LogFilter.class) int level, @NotNull Supplier<String> msg, @NotNull Throwable throwable) {
-            if (level > maxLevel()) {
-                return;
-            }
-            this.logger.log(LEVELS[level], msg, throwable);
         }
     }
 
@@ -481,6 +580,81 @@ public interface LogFilter {
                 default:
                     throw new IllegalArgumentException("The logging level '" + level + "' does not exist");
             }
+        }
+    }
+
+    /**
+     * Log4j2 implementation of LogFilter.
+     */
+    class Log4j implements LogFilter {
+
+        private static final org.apache.logging.log4j.Level[] LEVELS = new org.apache.logging.log4j.Level[] {
+                null,
+                org.apache.logging.log4j.Level.ERROR,
+                org.apache.logging.log4j.Level.WARN,
+                org.apache.logging.log4j.Level.INFO,
+                org.apache.logging.log4j.Level.INFO
+        };
+
+        private final org.apache.logging.log4j.Logger logger;
+        private final Supplier<Integer> maxLevel;
+
+        /**
+         * Constructor of Log4j LogFilter.
+         *
+         * @param logger   the Log4j2 logger.
+         * @param maxLevel the maximum logging level supplier.
+         */
+        public Log4j(@NotNull org.apache.logging.log4j.Logger logger, @NotNull Supplier<Integer> maxLevel) {
+            this.logger = logger;
+            this.maxLevel = maxLevel;
+        }
+
+        /**
+         * Get the underlying Log4j2 logger.
+         *
+         * @return the Log4j2 logger.
+         */
+        @NotNull
+        public org.apache.logging.log4j.Logger logger() {
+            return logger;
+        }
+
+        @Override
+        public int maxLevel() {
+            return maxLevel.get();
+        }
+
+        @Override
+        public void log(@MagicConstant(valuesFromClass = LogFilter.class) int level, @NotNull String msg) {
+            if (level > maxLevel()) {
+                return;
+            }
+            this.logger.log(LEVELS[level], msg);
+        }
+
+        @Override
+        public void log(@MagicConstant(valuesFromClass = LogFilter.class) int level, @NotNull String msg, @NotNull Throwable throwable) {
+            if (level > maxLevel()) {
+                return;
+            }
+            this.logger.log(LEVELS[level], msg, throwable);
+        }
+
+        @Override
+        public void log(@MagicConstant(valuesFromClass = LogFilter.class) int level, @NotNull Supplier<String> msg) {
+            if (level > maxLevel()) {
+                return;
+            }
+            this.logger.log(LEVELS[level], msg);
+        }
+
+        @Override
+        public void log(@MagicConstant(valuesFromClass = LogFilter.class) int level, @NotNull Supplier<String> msg, @NotNull Throwable throwable) {
+            if (level > maxLevel()) {
+                return;
+            }
+            this.logger.log(LEVELS[level], msg, throwable);
         }
     }
 }

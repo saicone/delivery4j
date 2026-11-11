@@ -1,7 +1,6 @@
 package com.saicone.delivery4j.broker;
 
 import com.saicone.delivery4j.Broker;
-import com.saicone.delivery4j.util.LogFilter;
 import jakarta.jms.BytesMessage;
 import jakarta.jms.Connection;
 import jakarta.jms.DeliveryMode;
@@ -67,7 +66,7 @@ public class ActiveMQBroker extends Broker {
                 this.bridges.put(channel, new Bridge(channel));
             }
         } catch (Throwable t) {
-            getLogger().log(LogFilter.ERROR, "Cannot start ActiveMQ connection", t);
+            getLogger().error("Cannot start ActiveMQ connection", t);
         }
     }
 
@@ -91,7 +90,7 @@ public class ActiveMQBroker extends Broker {
                 try {
                     this.bridges.put(channel, new Bridge(channel));
                 } catch (Throwable t) {
-                    getLogger().log(LogFilter.WARNING, "Cannot subscribe to channel '" + channel + "'", t);
+                    getLogger().warning("Cannot subscribe to channel '" + channel + "'", t);
                 }
             }
         }
@@ -156,7 +155,7 @@ public class ActiveMQBroker extends Broker {
                     ActiveMQBroker.this.receive(this.channel, data);
                 }
             } catch (JMSException | IOException e) {
-                getLogger().log(LogFilter.WARNING, "Cannot process received message from channel '" + this.channel + "'", e);
+                getLogger().warning("Cannot process received message from channel '" + this.channel + "'", e);
             }
         }
 

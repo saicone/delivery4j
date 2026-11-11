@@ -1,7 +1,6 @@
 package com.saicone.delivery4j.broker;
 
 import com.saicone.delivery4j.Broker;
-import com.saicone.delivery4j.util.LogFilter;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.codec.ByteArrayCodec;
@@ -275,7 +274,7 @@ public class LettuceBroker extends Broker {
             if (this.broker.isAvailable()) {
                 try {
                     if (this.reconnected) {
-                        this.broker.getLogger().log(LogFilter.INFO, "Redis connection is alive again");
+                        this.broker.getLogger().info("Redis connection is alive again");
                     }
                     // Subscribe channels and lock the thread
                     this.broker.getPubSubConnection().sync().subscribe(this.broker.getSubscribedChannels().toArray(new String[0]));
@@ -297,7 +296,7 @@ public class LettuceBroker extends Broker {
             try {
                 this.broker.getPubSubConnection().sync().unsubscribe();
             } catch (Throwable t) {
-                this.broker.getLogger().log(LogFilter.DEBUG, "There is an error while unsubscribing redis pubsub", t);
+                this.broker.getLogger().debug("There is an error while unsubscribing redis pubsub", t);
             }
         }
 
@@ -307,9 +306,9 @@ public class LettuceBroker extends Broker {
             }
 
             if (sleep) {
-                this.broker.getLogger().log(LogFilter.WARNING, () -> "Redis connection dropped, automatic reconnection in " + this.broker.getSleepTime() + " " + this.broker.getSleepUnit().name().toLowerCase() + "...", t);
+                this.broker.getLogger().warning(() -> "Redis connection dropped, automatic reconnection in " + this.broker.getSleepTime() + " " + this.broker.getSleepUnit().name().toLowerCase() + "...", t);
             } else {
-                this.broker.getLogger().log(LogFilter.WARNING, "Redis listener got unlocked, making an instant reconnection...", t);
+                this.broker.getLogger().warning("Redis listener got unlocked, making an instant reconnection...", t);
             }
 
             unsubscribe0();
@@ -327,7 +326,7 @@ public class LettuceBroker extends Broker {
                 try {
                     this.broker.receive(channel, message);
                 } catch (IOException e) {
-                    this.broker.getLogger().log(LogFilter.WARNING, "Cannot process received message from channel '" + channel + "'", e);
+                    this.broker.getLogger().warning("Cannot process received message from channel '" + channel + "'", e);
                 }
             }
         }
@@ -339,22 +338,22 @@ public class LettuceBroker extends Broker {
 
         @Override
         public void subscribed(String channel, long count) {
-            this.broker.getLogger().log(LogFilter.INFO, "Redis subscribed to channel '" + channel + "'");
+            this.broker.getLogger().info("Redis subscribed to channel '" + channel + "'");
         }
 
         @Override
         public void psubscribed(String pattern, long count) {
-            this.broker.getLogger().log(LogFilter.INFO, "Redis subscribed to pattern '" + pattern + "'");
+            this.broker.getLogger().info("Redis subscribed to pattern '" + pattern + "'");
         }
 
         @Override
         public void unsubscribed(String channel, long count) {
-            this.broker.getLogger().log(LogFilter.INFO, "Redis unsubscribed from channel '" + channel + "'");
+            this.broker.getLogger().info("Redis unsubscribed from channel '" + channel + "'");
         }
 
         @Override
         public void punsubscribed(String pattern, long count) {
-            this.broker.getLogger().log(LogFilter.INFO, "Redis unsubscribed from pattern '" + pattern + "'");
+            this.broker.getLogger().info("Redis unsubscribed from pattern '" + pattern + "'");
         }
     }
 }
