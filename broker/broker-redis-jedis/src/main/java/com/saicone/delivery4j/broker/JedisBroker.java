@@ -10,9 +10,9 @@ import redis.clients.jedis.BinaryJedisPubSub;
 import redis.clients.jedis.DefaultJedisClientConfig;
 import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.JedisCluster;
-import redis.clients.jedis.JedisPooled;
 import redis.clients.jedis.RedisClient;
 import redis.clients.jedis.RedisClusterClient;
+import redis.clients.jedis.SslOptions;
 import redis.clients.jedis.UnifiedJedis;
 import redis.clients.jedis.util.SafeEncoder;
 
@@ -67,8 +67,10 @@ public class JedisBroker extends Broker {
     @NotNull
     public static JedisBroker simple(@NotNull String address, @NotNull String password, @Nullable Integer database, boolean ssl) {
         final DefaultJedisClientConfig.Builder builder = DefaultJedisClientConfig.builder()
-                .password(password)
-                .ssl(ssl);
+                .password(password);
+        if (ssl) {
+            builder.sslOptions(SslOptions.defaults());
+        }
         if (database != null) {
             builder.database(database);
         }
@@ -132,9 +134,6 @@ public class JedisBroker extends Broker {
                 ((RedisClient) this.jedis).getPool().close();
             } else if (this.jedis instanceof RedisClusterClient) {
                 ((RedisClusterClient) this.jedis).getClusterNodes().forEach((key, pool) -> pool.close());
-            } else if (this.jedis instanceof JedisPooled) {
-                // deprecated
-                ((JedisPooled) this.jedis).getPool().close();
             } else if (this.jedis instanceof JedisCluster) {
                 // deprecated
                 ((JedisCluster) this.jedis).getClusterNodes().forEach((key, pool) -> pool.close());
@@ -195,9 +194,6 @@ public class JedisBroker extends Broker {
             return ((RedisClient) this.jedis).getPool().isClosed();
         } else if (this.jedis instanceof RedisClusterClient) {
             return ((RedisClusterClient) this.jedis).getClusterNodes().isEmpty();
-        } else if (this.jedis instanceof JedisPooled) {
-            // deprecated
-            return ((JedisPooled) this.jedis).getPool().isClosed();
         } else if (this.jedis instanceof JedisCluster) {
             // deprecated
             return ((JedisCluster) this.jedis).getClusterNodes().isEmpty();
