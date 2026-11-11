@@ -26,8 +26,10 @@ public class SqlBroker extends PlainTextBroker {
     private final ConnectionSupplier connectionSupplier;
 
     private String tablePrefix;
-    private int pollTime = 10;
+    private int pollTime = 1;
     private TimeUnit pollUnit = TimeUnit.SECONDS;
+    private int cleanTime = 2;
+    private TimeUnit cleanUnit = TimeUnit.MINUTES;
 
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private long currentID = -1;
@@ -98,7 +100,7 @@ public class SqlBroker extends PlainTextBroker {
                 this.getTask = getExecutor().runTimer(this::getMessages, this.pollTime, this.pollTime, this.pollUnit);
             }
             if (this.cleanTask == null) {
-                this.cleanTask = getExecutor().runTimer(this::cleanMessages, this.pollTime * 30L, this.pollTime * 30L, this.pollUnit);
+                this.cleanTask = getExecutor().runTimer(this::cleanMessages, this.cleanTime, this.cleanTime, this.cleanUnit);
             }
         } catch (SQLException e) {
             getLogger().error("Cannot start sql connection", e);
@@ -168,11 +170,8 @@ public class SqlBroker extends PlainTextBroker {
 
     /**
      * Set the poll that will be used to check for new messages from database,
-     * this is the maximum communication delay between applications.<br>
-     * Setting a different poll interval between applications may cause
-     * synchronization errors due it's value is multiplied by 3 to delete old
-     * messages from database in that interval.<br>
-     * By default, 10 seconds is used.
+     * this is the maximum communication delay between applications.
+     * By default, 1 second is used.
      *
      * @param time the delay between database poll.
      * @param unit the unit that {@code time} is expressed in.
@@ -180,6 +179,19 @@ public class SqlBroker extends PlainTextBroker {
     public void setPollInterval(int time, @NotNull TimeUnit unit) {
         this.pollTime = time;
         this.pollUnit = unit;
+    }
+
+    /**
+     * Set the clean interval that will be used to clean old messages from database,
+     * this is the maximum time that a message will be stored in database.
+     * By default, 2 minutes is used.
+     *
+     * @param time the delay between database clean.
+     * @param unit the unit that {@code time} is expressed in.
+     */
+    public void setCleanInterval(int time, @NotNull TimeUnit unit) {
+        this.cleanTime = time;
+        this.cleanUnit = unit;
     }
 
     /**
