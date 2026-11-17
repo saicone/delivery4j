@@ -3,6 +3,7 @@ package com.saicone.delivery4j;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.util.Comparator;
 
 /**
  * Represents and operation that accept a channel name and the data produced by a {@link Broker}.<br>
@@ -21,6 +22,13 @@ public interface BrokerListener<T> extends Comparable<BrokerListener<T>> {
      * Meaning that the lower the number, the higher the priority.
      */
     int DEFAULT_PRIORITY = 100;
+
+    /**
+     * A simple comparator that compares {@link BrokerListener} by their priority
+     * and then by their identity hash code to avoid collisions.
+     */
+    Comparator<BrokerListener<?>> COMPARATOR = Comparator.<BrokerListener<?>>comparingInt(BrokerListener::priority)
+                    .thenComparingInt(System::identityHashCode);
 
     /**
      * Get the priority of this listener.

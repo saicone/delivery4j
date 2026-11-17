@@ -99,31 +99,29 @@ Delivery4j contains the following artifacts:
 > [!NOTE]
 > If you still on Java 8 and want to use a `-hikari` artifact, filter the hikari sub-dependency and manually add hikari 4.x to your project.
 
-<details>
-  <summary>build.gradle</summary>
-
+build.gradle
 ```groovy
+repositories {
+    mavenCentral()
+}
+
 dependencies {
     implementation 'com.saicone:delivery4j-api:1.1.6'
 }
 ```
 
-</details>
-
-<details>
-  <summary>build.gradle.kts</summary>
-
+build.gradle.kts
 ```kotlin
+repositories {
+    mavenCentral()
+}
+
 dependencies {
     implementation("com.saicone:delivery4j-api:1.1.6")
 }
 ```
 
-</details>
-
-<details>
-  <summary>pom.xml</summary>
-
+pom.xml
 ```xml
 <dependencies>
     <dependency>
@@ -134,8 +132,6 @@ dependencies {
     </dependency>
 </dependencies>
 ```
-
-</details>
 
 ## Usage
 

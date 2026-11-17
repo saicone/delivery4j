@@ -50,7 +50,7 @@ public class MessageBroker {
      * @param channel the channel name
      */
     public MessageBroker(@NotNull String channel) {
-        this(channel, new TreeSet<>());
+        this(channel, new TreeSet<>(BrokerListener.COMPARATOR));
     }
 
     /**

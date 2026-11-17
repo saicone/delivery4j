@@ -20,7 +20,7 @@ import java.util.TreeSet;
  */
 public abstract class Broker implements AutoCloseable {
 
-    private final TreeSet<BrokerListener<byte[]>> listeners = new TreeSet<>();
+    private final TreeSet<BrokerListener<byte[]>> listeners = new TreeSet<>(BrokerListener.COMPARATOR);
     private TaskExecutor<?> executor = TaskExecutor.JAVA;
     private LogFilter logger = LogFilter.valueOf(this.getClass(), LogFilter.INFO);
 
