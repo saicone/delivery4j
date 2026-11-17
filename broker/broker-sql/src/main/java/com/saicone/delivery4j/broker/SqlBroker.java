@@ -155,8 +155,8 @@ public class SqlBroker extends PlainTextBroker {
                     getLogger().warning("Cannot close sql connection", e);
                 }
             }
+            this.lock.readLock().unlock();
         }
-        this.lock.readLock().unlock();
     }
 
     /**
@@ -255,8 +255,8 @@ public class SqlBroker extends PlainTextBroker {
                     getLogger().warning("Cannot close sql connection", e);
                 }
             }
+            this.lock.readLock().unlock();
         }
-        this.lock.readLock().unlock();
     }
 
     /**
@@ -284,7 +284,7 @@ public class SqlBroker extends PlainTextBroker {
                     getLogger().warning("Cannot close sql connection", e);
                 }
             }
+            this.lock.readLock().unlock();
         }
-        this.lock.readLock().unlock();
     }
 }
