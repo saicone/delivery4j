@@ -4,10 +4,6 @@ dependencies {
     api libs.activemq.client
 }
 
-java {
-    toolchain.languageVersion.set(JavaLanguageVersion.of(17))
-}
-
 javadoc {
     options {
         links "https://javadoc.io/doc/org.apache.activemq/activemq-client/${libs.versions.activemq.get()}/"
