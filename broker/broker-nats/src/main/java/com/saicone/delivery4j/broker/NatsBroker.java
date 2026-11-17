@@ -107,6 +107,8 @@ public class NatsBroker extends Broker {
         for (String channel : getSubscribedChannels()) {
             this.dispatcher.subscribe(channel);
         }
+
+        setEnabled(true);
     }
 
     @Override

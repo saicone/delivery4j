@@ -65,6 +65,8 @@ public class ActiveMQBroker extends Broker {
             for (String channel : getSubscribedChannels()) {
                 this.bridges.put(channel, new Bridge(channel));
             }
+
+            setEnabled(true);
         } catch (Throwable t) {
             getLogger().error("Cannot start ActiveMQ connection", t);
         }
