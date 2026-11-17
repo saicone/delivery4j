@@ -7,18 +7,20 @@ import org.jetbrains.annotations.NotNull;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * Represents an object that can transfer byte-array data across channels.<br>
+ * <br>
  * In popular terms, this is a globalized producer that deliver/publish temporary
  * data to multiple consumers using topics or queues (depending on the implementation)
  * and can also consume the data itself by subscribing to channels.
  *
  * @author Rubenicos
  */
-public abstract class Broker {
+public abstract class Broker implements AutoCloseable {
 
-    private ChannelConsumer<byte[]> consumer = (channel, data) -> {};
+    private final TreeSet<BrokerListener<byte[]>> listeners = new TreeSet<>();
     private TaskExecutor<?> executor = TaskExecutor.JAVA;
     private LogFilter logger = LogFilter.valueOf(this.getClass(), LogFilter.INFO);
 
@@ -40,7 +42,7 @@ public abstract class Broker {
     /**
      * Method to run when broker is being subscribed to new channels.
      *
-     * @param channels the channels name.
+     * @param channels the channels name
      */
     protected void onSubscribe(@NotNull String... channels) {
     }
@@ -48,25 +50,24 @@ public abstract class Broker {
     /**
      * Method to run when broker is being unsubscribed from channels.
      *
-     * @param channels the channels name.
+     * @param channels the channels name
      */
     protected void onUnsubscribe(@NotNull String... channels) {
     }
 
     /**
-     * Get the current channel consumer.
+     * Get the current broker listeners.
      *
-     * @return a channel consumer that accept a channel name with byte-array data.
+     * @return a set of listeners
      */
-    @NotNull
-    public ChannelConsumer<byte[]> getConsumer() {
-        return consumer;
+    public TreeSet<BrokerListener<byte[]>> getListeners() {
+        return listeners;
     }
 
     /**
      * Get the current delayed executor.
      *
-     * @return a delayed executor.
+     * @return a delayed executor
      */
     @NotNull
     @SuppressWarnings("unchecked")
@@ -77,7 +78,7 @@ public abstract class Broker {
     /**
      * Get the current logger.
      *
-     * @return a logger that print information about broker operations.
+     * @return a logger that print information about broker operations
      */
     @NotNull
     public LogFilter getLogger() {
@@ -87,7 +88,7 @@ public abstract class Broker {
     /**
      * Get the subscribed channels.
      *
-     * @return a set of channels names.
+     * @return a set of channels names
      */
     @NotNull
     public Set<String> getSubscribedChannels() {
@@ -97,25 +98,26 @@ public abstract class Broker {
     /**
      * Get the current broker status.
      *
-     * @return true if the broker is enabled.
+     * @return true if the broker is enabled
      */
     public boolean isEnabled() {
         return enabled;
     }
 
     /**
-     * Replace the current channel consumer.
+     * Add a new listener to the broker.
      *
-     * @param consumer the channel consumer to set.
+     * @param listener the listener to add
+     * @return         true if the listener was added, false if it was already registered
      */
-    public void setConsumer(@NotNull ChannelConsumer<byte[]> consumer) {
-        this.consumer = consumer;
+    public boolean addListener(@NotNull BrokerListener<byte[]> listener) {
+        return this.listeners.add(listener);
     }
 
     /**
      * Replace the current delayed executor.
      *
-     * @param executor the delayed executor to set.
+     * @param executor the delayed executor to set
      */
     public void setExecutor(@NotNull TaskExecutor<?> executor) {
         this.executor = executor;
@@ -124,7 +126,7 @@ public abstract class Broker {
     /**
      * Replace the current logger.
      *
-     * @param logger the logger to set.
+     * @param logger the logger to set
      */
     public void setLogger(@NotNull LogFilter logger) {
         this.logger = logger;
@@ -133,7 +135,7 @@ public abstract class Broker {
     /**
      * Set broker status.
      *
-     * @param enabled true for enabled, false otherwise.
+     * @param enabled true for enabled, false otherwise
      */
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
@@ -150,6 +152,7 @@ public abstract class Broker {
     /**
      * Close the broker connection.
      */
+    @Override
     public void close() {
         if (isEnabled()) {
             setEnabled(false);
@@ -168,8 +171,8 @@ public abstract class Broker {
      * Subscribe broker into provided channels names.<br>
      * Any repeated channel will be ignored.
      *
-     * @param channels the channels to register.
-     * @return         true if any channel was added, false if all the provided channels are already registered.
+     * @param channels the channels to register
+     * @return         true if any channel was added, false if all the provided channels are already registered
      */
     public boolean subscribe(@NotNull String... channels) {
         final Set<String> list = new HashSet<>();
@@ -189,8 +192,8 @@ public abstract class Broker {
      * Unsubscribe broker from provided channels names.<br>
      * Any repeated channel will be ignored.
      *
-     * @param channels the channels to unregister.
-     * @return         true if any channel was removed, false if all the provided channels are already unregistered.
+     * @param channels the channels to unregister
+     * @return         true if any channel was removed, false if all the provided channels are already unregistered
      */
     public boolean unsubscribe(@NotNull String... channels) {
         final Set<String> list = new HashSet<>();
@@ -209,20 +212,22 @@ public abstract class Broker {
     /**
      * Send byte data array to provided channel.
      *
-     * @param channel the channel name.
-     * @param data    the data to send.
-     * @throws IOException if anny error occurs while sending the data.
+     * @param channel the channel name
+     * @param data    the data to send
+     * @throws IOException if anny error occurs while sending the data
      */
     public abstract void send(@NotNull String channel, byte[] data) throws IOException;
 
     /**
      * Receive byte array from provided channel.
      *
-     * @param channel the channel name.
-     * @param data    the data to receive.
-     * @throws IOException if any error occurs while receiving the data.
+     * @param channel the channel name
+     * @param data    the data to receive
+     * @throws IOException if any error occurs while receiving the data
      */
     public void receive(@NotNull String channel, byte[] data) throws IOException {
-        getConsumer().accept(channel, data);
+        for (BrokerListener<byte[]> listener : getListeners()) {
+            listener.accept(channel, data);
+        }
     }
 }

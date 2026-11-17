@@ -1,6 +1,5 @@
 package com.saicone.delivery4j;
 
-import com.saicone.delivery4j.broker.TestBroker;
 import com.saicone.delivery4j.impl.TestMessenger;
 import com.saicone.delivery4j.util.DataIdentifier;
 import com.saicone.delivery4j.util.Encryptor;
@@ -9,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
+import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 
@@ -22,12 +22,12 @@ public class MessengerTest {
     private static final String ALGORITHM = "AES";
 
     @Test
-    public void testDelivery() {
+    public void testDelivery() throws IOException {
         final TestMessenger messenger = new TestMessenger();
-        messenger.start(new TestBroker());
+        messenger.start();
 
         final String[] result = new String[2];
-        messenger.subscribe(CHANNEL).consume((channel, lines) -> {
+        messenger.subscribe(CHANNEL).listener((channel, lines) -> {
             result[0] = channel;
             result[1] = lines[0];
         });
@@ -39,12 +39,12 @@ public class MessengerTest {
     }
 
     @Test
-    public void testIdentifier() {
+    public void testIdentifier() throws IOException {
         final TestMessenger messenger = new TestMessenger();
         messenger.start();
 
         final String[] result = new String[2];
-        messenger.subscribe(CHANNEL).consume((channel, lines) -> {
+        messenger.subscribe(CHANNEL).listener((channel, lines) -> {
             result[0] = channel;
             result[1] = lines[0];
         }).identifier(DataIdentifier.bit32());
@@ -56,16 +56,16 @@ public class MessengerTest {
     }
 
     @Test
-    public void testEncryption() throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {
+    public void testEncryption() throws IOException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {
         final TestMessenger messenger = new TestMessenger();
-        messenger.start(new TestBroker());
+        messenger.start();
 
         KeyGenerator keyGen = KeyGenerator.getInstance(ALGORITHM);
         keyGen.init(128);
         final SecretKey key = keyGen.generateKey();
 
         final String[] result = new String[2];
-        messenger.subscribe(CHANNEL).consume((channel, lines) -> {
+        messenger.subscribe(CHANNEL).listener((channel, lines) -> {
             result[0] = channel;
             result[1] = lines[0];
         }).encryptor(Encryptor.of(ALGORITHM, key));

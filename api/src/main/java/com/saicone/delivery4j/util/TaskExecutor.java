@@ -26,7 +26,6 @@ package com.saicone.delivery4j.util;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
@@ -45,7 +44,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  * @param <T> the cancellable object type
  */
-public interface TaskExecutor<T> extends Executor, Closeable {
+public interface TaskExecutor<T> extends Executor, AutoCloseable {
 
     /**
      * Task executor object that use Java methods to execute tasks.<br>

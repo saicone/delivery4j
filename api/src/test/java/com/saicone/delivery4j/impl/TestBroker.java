@@ -1,4 +1,4 @@
-package com.saicone.delivery4j.broker;
+package com.saicone.delivery4j.impl;
 
 import com.saicone.delivery4j.Broker;
 import org.jetbrains.annotations.NotNull;
@@ -6,6 +6,10 @@ import org.jetbrains.annotations.NotNull;
 import java.io.IOException;
 
 public class TestBroker extends Broker {
+
+    public TestBroker() {
+        setExecutor(TestTaskExecutor.INSTANCE);
+    }
 
     @Override
     protected void onStart() {
