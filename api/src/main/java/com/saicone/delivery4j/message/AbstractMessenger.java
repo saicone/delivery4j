@@ -7,10 +7,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
 
 /**
  * Messenger abstract class to send messages across channels using a {@link Broker}.<br>
@@ -21,16 +18,12 @@ import java.util.concurrent.Executor;
  *
  * @author Rubenicos
  */
-public abstract class AbstractMessenger implements BrokerListener<byte[]>, AutoCloseable {
+public abstract class AbstractMessenger implements Messenger, BrokerListener<byte[]>, AutoCloseable {
 
     private Broker broker;
     private final Map<String, MessageBroker> handlers = new ConcurrentHashMap<>();
 
-    /**
-     * Get the current messenger status.
-     *
-     * @return true if the messenger is enabled
-     */
+    @Override
     public boolean isEnabled() {
         return this.broker != null && this.broker.isEnabled();
     }
@@ -80,6 +73,7 @@ public abstract class AbstractMessenger implements BrokerListener<byte[]>, AutoC
     /**
      * Start the messenger instance connection.
      */
+    @Override
     public void start() {
         start(loadBroker());
     }
@@ -99,9 +93,6 @@ public abstract class AbstractMessenger implements BrokerListener<byte[]>, AutoC
         this.broker.start();
     }
 
-    /**
-     * Close the messenger instance connection.
-     */
     @Override
     public void close() {
         if (this.broker != null) {
@@ -112,6 +103,7 @@ public abstract class AbstractMessenger implements BrokerListener<byte[]>, AutoC
     /**
      * Clear any message channels and incoming consumers.
      */
+    @Override
     public void clear() {
         if (this.broker != null) {
             this.broker.clear();
@@ -122,16 +114,8 @@ public abstract class AbstractMessenger implements BrokerListener<byte[]>, AutoC
         this.handlers.clear();
     }
 
-    /**
-     * Find or create a message broker subscription.<br>
-     * This method will make an automatic subscription into broker if it exists
-     * and is not subscribed to provided channel name.
-     *
-     * @param channel the channel name
-     * @return        a message channel subscription
-     */
-    @NotNull
-    public MessageBroker subscribe(@NotNull String channel) {
+    @Override
+    public @NotNull MessageBroker subscribe(@NotNull String channel) {
         final MessageBroker messageBroker = this.handlers.computeIfAbsent(channel, MessageBroker::new);
         if (this.broker != null) {
             this.broker.subscribe(channel);
@@ -139,35 +123,15 @@ public abstract class AbstractMessenger implements BrokerListener<byte[]>, AutoC
         return messageBroker;
     }
 
-    /**
-     * Subscribe to provided message channel.<br>
-     * This method will make an automatic subscription into broker if it exists
-     * and is not subscribed to provided channel.
-     *
-     * @param broker the broker to subscribe
-     * @return       the previous broker associated with provided channel name, null if there was no mapping for channel name
-     */
-    @Nullable
-    public MessageBroker subscribe(@NotNull MessageBroker broker) {
+    @Override
+    public @Nullable MessageBroker subscribe(@NotNull MessageBroker broker) {
         if (this.broker != null) {
             this.broker.subscribe(broker.getChannel());
         }
         return this.handlers.put(broker.getChannel(), broker);
     }
 
-    /**
-     * Send multi-line message to provided channel name.<br>
-     * <br>
-     * Take in count this method accept any Object as message lines,
-     * but everything will be converted to String.<br>
-     * If any object is {@code null} or {@code "null"} it will be sent
-     * as null object, and any consumer will get a null object as well.
-     *
-     * @param channel the channel name to send the message
-     * @param lines   the message lines
-     * @throws IOException if any I/O error occurs
-     * @throws IllegalStateException if the messenger is not enabled or the channel doesn't exist
-     */
+    @Override
     public void send(@NotNull String channel, @Nullable Object... lines) throws IOException {
         if (!isEnabled()) {
             throw new IllegalStateException("The messenger is not enabled");
@@ -179,53 +143,6 @@ public abstract class AbstractMessenger implements BrokerListener<byte[]>, AutoC
         }
 
         this.broker.send(channel, messageBroker.encode(lines));
-    }
-
-    /**
-     * Send multi-line message to provided channel name asynchronously.<br>
-     * <br>
-     * Take in count this method accept any Object as message lines,
-     * but everything will be converted to String.<br>
-     * If any object is {@code null} or {@code "null"} it will be sent
-     * as null object, and any consumer will get a null object as well.
-     *
-     * @param channel the channel name to send the message
-     * @param lines   the message lines
-     * @return        a completable future that will complete when the send operation is done
-     */
-    @NotNull
-    public CompletableFuture<Void> sendAsync(@NotNull String channel, @Nullable Object... lines) {
-        return CompletableFuture.runAsync(() -> {
-            try {
-                send(channel, lines);
-            } catch (Throwable t) {
-                throw new CompletionException(t);
-            }
-        });
-    }
-
-    /**
-     * Send multi-line message to provided channel name asynchronously using a provided executor.<br>
-     * <br>
-     * Take in count this method accept any Object as message lines,
-     * but everything will be converted to String.<br>
-     * If any object is {@code null} or {@code "null"} it will be sent
-     * as null object, and any consumer will get a null object as well.
-     *
-     * @param executor the executor to run the send operation
-     * @param channel  the channel name to send the message
-     * @param lines    the message lines
-     * @return         a completable future that will complete when the send operation is done
-     */
-    @NotNull
-    public CompletableFuture<Void> sendAsync(@NotNull Executor executor, @NotNull String channel, @Nullable Object... lines) {
-        return CompletableFuture.runAsync(() -> {
-            try {
-                send(channel, lines);
-            } catch (Throwable t) {
-                throw new CompletionException(t);
-            }
-        }, executor);
     }
 
     @Override

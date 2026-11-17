@@ -25,6 +25,47 @@
 
 There are multiple ways to transfer data between Java applications, this library offers an easy way to connect with them using common methods.
 
+```java
+// Create a broker instance to transfer data
+// There is a plenty number of broker implementations, in this case we are using JedisBroker to connect to Redis database
+final Broker broker = JedisBroker.simple("redis://:password@localhost:6379/0");
+// (optional) Provide your own implementation if TaskExecutor
+broker.setExecutor(TaskExecutor.from(ExecutorService, ScheduledExecutorService));
+// (optional) Use your application logger with a max logging level
+broker.setLogger(LogFilter.valueOf(logger, LogFilter.INFO));
+// (optional) In case the broker is instance of PlainTextBroker, you can use a different byte codec implementation
+broker.setCodec(ByteCodec.Z85);
+
+// Create a messenger instance to send and receive messages
+final Messenger messenger = Messenger.simple(broker);
+
+// Subscribe to channel, for example, named "myapp:channel"
+messenger.subscribe("myapp:channel")
+         // (optional) Append a listener to receive messages from the channel
+         .listener((channel, lines) -> {
+             // do something
+         })
+         // (optional) Provide a identifier to avoid receiving self-produced messages
+         .identifier(DataIdentifier.bit32())
+         // (optional) Provide an encryptor to make end-to-end encryption
+         .encryptor(Encryptor.of(key));
+
+// Start the messenger instance to make it work
+messenger.start();
+
+// Send a multi-line message to the channel
+// So your application on the other side can receive it
+messenger.send("myapp:channel", "first line", "second line", "third line");
+
+// Or send it asynchronously
+messenger.sendAsync("myapp:channel", "first line", "second line", "third line");
+
+// On shutdown, close the messenger instance to release resources
+messenger.close();
+// You can also clear the instance to remove all subscriptions and listeners
+messenger.clear();
+```
+
 Currently supporting the brokers:
 
 * [ActiveMQ](https://github.com/apache/activemq) using topic producers and consumers.
@@ -110,7 +151,7 @@ Broker broker = // Create instance from any implementation
 // Subscribe to channels
 broker.subscribe("hello:world", "myChannel1");
 
-broker.setConsumer((channel, data) -> {
+broker.addListener((channel, data) -> {
     // do something
 });
 
@@ -126,7 +167,7 @@ broker.send("myChannel1", data);
 Some brokers require to convert bytes to String and viceversa, Base64 is used by default.
 
 ```java
-Broker broker = // Create instance from any implementation
+PlainTextBroker broker = // Create instance from any implementation
 
 broker.setCodec(new ByteCodec<>() {
     @Override
@@ -146,19 +187,19 @@ Some brokers have blocking operations or repetitive tasks, it's suggested to imp
 ```java
 Broker broker = // Create instance from any implementation
 
-broker.setExecutor(new DelayedExecutor<MyTaskObject>() {
+broker.setExecutor(new TaskExecutor<MyTaskObject>() {
     @Override
-    public @NotNull MyTaskObject execute(@NotNull Runnable command) {
+    public @NotNull MyTaskObject run(@NotNull Runnable command) {
         // run task and return itself
     }
 
     @Override
-    public @NotNull MyTaskObject execute(@NotNull Runnable command, long delay, @NotNull TimeUnit unit) {
+    public @NotNull MyTaskObject runLater(@NotNull Runnable command, long delay, @NotNull TimeUnit unit) {
         // run delayed task and return itself
     }
 
     @Override
-    public @NotNull MyTaskObject execute(@NotNull Runnable command, long delay, long period, @NotNull TimeUnit unit) {
+    public @NotNull MyTaskObject runTimer(@NotNull Runnable command, long delay, long period, @NotNull TimeUnit unit) {
         // run repetitive task and return itself
     }
 
@@ -199,30 +240,18 @@ broker.setLogger(LogFilter.valueOf(MyObject.class, () -> 3));
 
 Probably the reason why you are here, it's a simple usage of brokers to send and receive multi-line String messages.
 
-First you need to extend AbstractMessenger and provide a broker.
-
 ```java
-public class Messenger extends AbstractMessenger {
-    @Override
-    protected Broker loadBroker() {
-        // Create instance from any implementation
-    }
-}
-```
-
-And then use the Messenger.
-
-```java
-Messenger messenger = new Messenger();
+Broker broker = ...;
+Messenger messenger = Messenger.simple(broker);
 
 // Start connection
 messenger.start();
 
 // Send multi-line message to channel
-messeger.send("myChannel1", "Hello", "World");
+messenger.send("myChannel1", "Hello", "World");
 
 // Subscribe to channel
-messenger.subscribe("myChannel1").consume((channel, lines) -> {
+messenger.subscribe("myChannel1").listener((channel, lines) -> {
     // do something
 });
 ```
@@ -230,27 +259,29 @@ messenger.subscribe("myChannel1").consume((channel, lines) -> {
 The subscribed message channels can have an identifier instance to avoid receive outbound messages.
 
 ```java
-Messenger messenger = new Messenger();
+Broker broker = ...;
+Messenger messenger = Messenger.simple(broker);
 
 // Subscribe to channel
-MessageChannel channel = messenger.subscribe("myChannel1").consume((channel, lines) -> {
+MessageChannel channel = messenger.subscribe("myChannel1").listener((channel, lines) -> {
     // do something
 });
 
 // Provide a 32-bit identifier
-chanel.identifier(DataIdentifier.bit32());
+channel.identifier(DataIdentifier.bit32());
 
 // Provide a 64-bit identifier (only needed if your application can send more than 32767 messages per second)
-chanel.identifier(DataIdentifier.bit64());
+channel.identifier(DataIdentifier.bit64());
 ```
 
 And also can have an end-to-end encryption.
 
 ```java
-Messenger messenger = new Messenger();
+Broker broker = ...;
+Messenger messenger = Messenger.simple(broker);
 
 // Subscribe to channel
-MessageChannel channel = messenger.subscribe("myChannel1").consume((channel, lines) -> {
+MessageChannel channel = messenger.subscribe("myChannel1").listener((channel, lines) -> {
     // do something
 });
 
