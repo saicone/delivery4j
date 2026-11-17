@@ -21,6 +21,8 @@ test {
 publishing {
     publications {
         maven(MavenPublication) {
+            artifactId = 'delivery4j-api'
+
             pom {
                 afterEvaluate {
                     description = 'Java library facade for multiple data delivery concepts'
