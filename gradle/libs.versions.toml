@@ -12,7 +12,7 @@ lettuce = "7.9.0.RELEASE"
 log4j = "2.26.1"
 nats = "2.26.4"
 postgresql = "42.7.14"
-rabbitmq = "5.37.1"
+rabbitmq = "5.38.0"
 slf4j = "2.0.20"
 valkey = "5.5.0"
 
